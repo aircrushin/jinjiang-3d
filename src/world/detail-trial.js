@@ -12,3 +12,4 @@ export function resolveDetailAsset(tile,trial){
 export const TRIAL_SCENES=[
  {id:'trial-far',group:'detail',name:'检查 · 远离释放',sub:'高空释放精细块，恢复基础体量',icon:'top',atmos:{timeOfDay:12.4,weather:'clear',haze:20,lightIntensity:100,exposure:100},cam:[113.2372,23.108,2400],tgt:[113.2372,23.110,0]},
 ];
+

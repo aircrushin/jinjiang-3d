@@ -1,4 +1,4 @@
-// 真实广州场景装配：水系距离场 → 地面与地块 → 江堤 → 路网 / 高架 / 跨江桥 → 真实建筑（合并网格）
+// 真实成都锦江区场景装配：水系距离场 → 地面与地块 → 江堤 → 路网 / 高架 / 跨江桥 → 真实建筑（合并网格）
 // → 补全街区与构件细节（实例化）→ 地标 → 行道树 / 公园林木 / 路灯 → 车流与游船。
 // 图层：0 = 主相机 + 江面倒影；1 = 仅主相机（地面、道路、树、车等不参与倒影以节省开销）。
 
@@ -238,7 +238,8 @@ export class World {
     })))];
     const st = D.meta.stats;
     this.stats = {
-      buildings: st.buildings + st.fill,
+      // 统计胶囊只报告真实 OSM 建筑；补全体块仍参与渲染但不冒充测绘数据。
+      buildings: st.buildings,
       osm: st.buildings,
       qilou: P.stats.qilou,
       tall: st.tall,
@@ -247,7 +248,7 @@ export class World {
       roadKm: st.roadKm,
     };
     this.details=createDetailLayer(this,D);
-    if(!this.details){const el=document.getElementById('detail-status');if(el){el.textContent='精细片区暂不可用 · 显示基础场景';el.title=D.detailManifestError||'No detail metadata';}}
+    if(!this.details){const el=document.getElementById('detail-status');if(el){el.textContent=D.meta.cityId==='chengdu-jinjiang'?'成都 P1 基础场景 · 精细片区待接入':'精细片区暂不可用 · 显示基础场景';el.title=D.detailManifestError||'No detail metadata';}}
   }
 
   // ---------- 地块铺装（按优先级顺序绘制，不写深度；顶点带高度，山地上已细分贴地）----------
@@ -828,3 +829,4 @@ export class World {
     }
   }
 }
+

@@ -638,7 +638,7 @@ function frame(now) {
       ctx.fillStyle='#fff';ctx.fillText(caption,28,size+20);
     }
     a.href = output.toDataURL('image/png');
-    a.download = `guangzhou-${current || 'view'}.png`;
+    a.download = `chengdu-jinjiang-${current || 'view'}.png`;
     a.click();
     hud.toast('已导出当前视角截图');
   }

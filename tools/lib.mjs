@@ -2,10 +2,11 @@
 
 import zlib from 'node:zlib';
 import fs from 'node:fs';
+import { CITY_CONFIG } from './city-config.mjs';
 
 // ---------- 投影：经纬度 → 本地米制坐标（x 向东，z 向南）----------
-export const LON0 = 113.296;
-export const LAT0 = 23.1185;
+export const LON0 = CITY_CONFIG.origin.lon;
+export const LAT0 = CITY_CONFIG.origin.lat;
 export const KX = 111320 * Math.cos((LAT0 * Math.PI) / 180);
 export const KZ = 110750;
 export const proj = (lon, lat) => [(lon - LON0) * KX, -(lat - LAT0) * KZ];

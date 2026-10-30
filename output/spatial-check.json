@@ -1,0 +1,39 @@
+{
+  "boundary": {
+    "relation": 4734760,
+    "featureName": "������",
+    "bbox": {
+      "south": 30.5493864,
+      "west": 104.057658,
+      "north": 30.6724867,
+      "east": 104.1682525
+    }
+  },
+  "raw": {
+    "buildingWays": 23544,
+    "roadWays": 12662,
+    "closedBuildingWays": 23544,
+    "boundaryBuildingWays": 10416,
+    "boundaryBuildingRatio": 0.4424,
+    "bridgeWays": 1398
+  },
+  "checks": {
+    "boundaryVerified": true,
+    "buildingClosureRatio": 1,
+    "roadsHaveGeometry": true,
+    "bridgeTagsPresent": true
+  },
+  "source": {
+    "type": "osm-pbf",
+    "file": "data/source/sichuan.osm.pbf",
+    "clippedTo": {
+      "south": 30.5422,
+      "west": 104.0493,
+      "north": 30.6797,
+      "east": 104.1766
+    }
+  },
+  "limitations": [
+    "PBF is a regional extract; the renderer still uses its configured outer buffer and administrative-boundary clipping."
+  ]
+}

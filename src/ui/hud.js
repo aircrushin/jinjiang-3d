@@ -34,12 +34,13 @@ export class Hud {
     });
     const legend = document.getElementById('mm-legend');
     const items = [
-      ['珠江水系', '#3a7d96'],
+      ['锦江水系', '#3a7d96'],
       ['公园绿地', '#4f9a5a'],
       ['真实建筑', '#c9c4ba'],
       ['超高层', '#7fb0ff'],
-      ['骑楼街', '#ffb35c'],
+      ['步行街', '#ffb35c'],
       ['高架 / 桥', '#ff8fc8'],
+      ['锦江区行政边界', '#ffd166'],
     ];
     legend.innerHTML = items.map(([t, c]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
   }
@@ -50,7 +51,7 @@ export class Hud {
       ['骑楼', s.qilou, '#ffb35c'],
       ['超高层', s.tall, '#7fb0ff'],
       ['树木', s.trees, '#5fc28a'],
-      ['跨江桥', s.bridges, '#ffb86b'],
+      ['桥梁', s.bridges, '#ffb86b'],
       ['道路', `${s.roadKm} km`, '#cfd3d6'],
     ];
     this.chips.innerHTML =
@@ -227,6 +228,20 @@ export class Hud {
       }
       g.fill();
     }
+    // 行政边界：与底图同源的 relation 4734760，明确区内/缓冲区范围。
+    if (D.boundary?.rings?.length) {
+      g.save();
+      g.strokeStyle = '#ffd166';
+      g.lineWidth = 1.8;
+      g.setLineDash([5, 3]);
+      for (const ring of D.boundary.rings) {
+        g.beginPath();
+        ring.outer.forEach((p, i) => (i ? g.lineTo(tx(p[0]), tz(p[1])) : g.moveTo(tx(p[0]), tz(p[1]))));
+        g.closePath();
+        g.stroke();
+      }
+      g.restore();
+    }
     // 跨江桥
     g.strokeStyle = '#ffd166';
     g.lineWidth = 1.6;
@@ -235,17 +250,6 @@ export class Hud {
       g.beginPath();
       g.moveTo(tx(br.a[0]), tz(br.a[1]));
       g.lineTo(tx(br.b[0]), tz(br.b[1]));
-      g.stroke();
-    }
-    // 广州塔
-    const ct = D.landmarks.find((l) => l.kind === 'cantonTower');
-    if (ct) {
-      g.fillStyle = '#ff6a45';
-      g.beginPath();
-      g.arc(tx(ct.x), tz(ct.z), 4, 0, Math.PI * 2);
-      g.fill();
-      g.strokeStyle = '#fff';
-      g.lineWidth = 1.2;
       g.stroke();
     }
     document.getElementById('mm-scale').textContent = `${(sx / 1000).toFixed(1)} × ${(sz / 1000).toFixed(1)} km`;

@@ -1,5 +1,6 @@
 # OSM 原始下载（可由 npm run fetch:osm 重新获取）
 data/raw/
+.playwright-cli/
 
 # 本地调试产物
 .playwright-mcp/
@@ -17,3 +18,5 @@ docs/项目评估报告-*.md
 # Python generated caches
 __pycache__/
 *.py[cod]
+
+data/source/*.osm.pbf

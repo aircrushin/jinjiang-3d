@@ -290,7 +290,7 @@ export class Atmosphere {
   apply(P) {
     const t = P.timeOfDay;
     const DEG = Math.PI / 180;
-    const lat = 23.13 * DEG;
+    const lat = 30.65 * DEG;
     const decl = 12 * DEG;
     const Hang = (t - 12.4) * 15 * DEG;
     const sinEl = Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(Hang);

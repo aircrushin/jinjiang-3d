@@ -5,7 +5,7 @@
 //   node tools/build-city.mjs [--debug] [--out <目录>]
 //
 // 输出内容：
-//   · 水域有符号距离场（内圈 6 m / 外圈 24 m 两级网格；R = 全部水域，G = 珠江主航道）
+//   · 水域有符号距离场（内圈 6 m / 外圈 24 m 两级网格；R = 全部水域，G = 主河道）
 //   · 道路（真实走向、等级、车道数、单行、桥梁 / 高架纵断面、路口清除距离）
 //   · 建筑（真实轮廓、高度 / 层数推断、立面风格、骑楼临街面、屋顶类型）
 //   · 地块铺装（公园、草地、林地、广场、停车场、运动场……）三角化结果
@@ -23,9 +23,10 @@ import {
   proj, LON0, LAT0, KX, KZ, hash32, rand01, RNG, area, centroid, bbox, pointInRing, segDist, cleanRing, simplify,
   dropCollinear, assembleRings, minRect, Grid, signedDistance, components, writePNG,
 } from './lib.mjs';
+import { CITY_CONFIG } from './city-config.mjs';
 
 const DEBUG = process.argv.includes('--debug');
-const RAW = 'data/raw/';
+const RAW = CITY_CONFIG.rawDir;
 // --out <目录>：输出位置（默认 data/，测试时写到临时目录）
 const OUT_DIR = (() => {
   const i = process.argv.indexOf('--out');
@@ -37,13 +38,30 @@ const load = (f) => JSON.parse(fs.readFileSync(RAW + f, 'utf8'));
 const P = (p) => proj(p[0], p[1]);
 const LL = (lon, lat) => proj(lon, lat);
 
+// 行政边界用于裁剪与运行时显示。bbox 只负责保留边界外的自然衔接缓冲。
+const boundaryGeo = JSON.parse(fs.readFileSync(CITY_CONFIG.boundaryPath, 'utf8'));
+const boundaryRings = [];
+for (const f of boundaryGeo.features || []) {
+  const g = f.geometry;
+  if (!g) continue;
+  const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+  for (const rings of polys) {
+    const outer = cleanRing(rings[0].map(P));
+    const holes = rings.slice(1).map((r) => cleanRing(r.map(P))).filter((r) => r.length >= 3);
+    if (outer.length >= 3) boundaryRings.push({ outer, holes });
+  }
+}
+if (!boundaryRings.length) throw new Error(`行政边界为空: ${CITY_CONFIG.boundaryPath}`);
+const inAdmin = (x, z) => boundaryRings.some(({ outer, holes }) => pointInRing(x, z, outer) && !holes.some((h) => pointInRing(x, z, h)));
+
 // 城市精细区域（与抓取范围一致）
 const CITY = (() => {
-  const [x0, z1] = proj(113.212, 23.085);
-  const [x1, z0] = proj(113.38, 23.152);
+  const [x0, z1] = proj(CITY_CONFIG.bbox.west, CITY_CONFIG.bbox.south);
+  const [x1, z0] = proj(CITY_CONFIG.bbox.east, CITY_CONFIG.bbox.north);
   return { x0, x1, z0, z1 };
 })();
 const inCity = (x, z, m = 0) => x > CITY.x0 - m && x < CITY.x1 + m && z > CITY.z0 - m && z < CITY.z1 + m;
+const inCoverage = (x, z, m = 0) => inCity(x, z, m);
 
 // ====================================================================================
 // 1. 水域
@@ -121,8 +139,8 @@ function sdfTexture(g, main) {
 // 内圈（城市范围外扩 1.2 km）6 m；外圈（整个抓取范围）24 m
 const IN = { x0: CITY.x0 - 1200, z0: CITY.z0 - 1200, x1: CITY.x1 + 1200, z1: CITY.z1 + 1200, cs: 6 };
 const OUT = (() => {
-  const [x0, z1] = proj(113.145, 23.025);
-  const [x1, z0] = proj(113.455, 23.205);
+  const [x0, z1] = proj(CITY_CONFIG.outerBbox.west, CITY_CONFIG.outerBbox.south);
+  const [x1, z0] = proj(CITY_CONFIG.outerBbox.east, CITY_CONFIG.outerBbox.north);
   return { x0, z0, x1, z1, cs: 24 };
 })();
 const gIn = waterGrid(IN.x0, IN.z0, IN.x1, IN.z1, IN.cs);
@@ -164,12 +182,8 @@ const nameId = (n) => {
   }
   return nameIdx.get(n);
 };
-const QILOU_STREETS = new Set(
-  ('上九路 下九路 第十甫路 恩宁路 龙津西路 龙津中路 龙津东路 人民中路 人民南路 大德路 大南路 文明路 东华东路 东华西路 东华南路 北京路 ' +
-    '海珠中路 海珠南路 起义路 德政中路 德政南路 中山四路 中山五路 中山六路 中山七路 大新路 一德路 泰康路 万福路 珠光路 长堤大马路 八旗二马路 ' +
-    '南华西路 南华中路 南华东路 同福西路 同福中路 同福东路 洪德路 豪贤路 文德路 解放中路 解放南路 光复中路 光复南路 长寿路 长寿东路 宝华路 多宝路 ' +
-    '带河路 杉木栏路 和平中路 和平东路 丛桂路 西华路 六二三路 惠福东路 惠福西路 越秀南路 越秀中路 大马站 盐运西 北京南路').split(' '),
-);
+// 成都不启用岭南骑楼规则；建筑首层仍由通用立面程序生成。
+const QILOU_STREETS = new Set();
 const HW = {
   motorway: { cls: RC.EXPRESS, lanes: 3, w1: 3.6 },
   trunk: { cls: RC.ARTERIAL, lanes: 3, w1: 3.5 },
@@ -261,8 +275,8 @@ roads.forEach((r, ri) => {
 // 与原始点一一对应的投影点（未简化）
 for (const r of roads) r.full = r.raw.map(P);
 
-// ---- 跨江桥：逐段检测跨越珠江主航道的区段，按位置聚类成桥 ----
-const DECK = { 海珠桥: 9, 人民桥: 11, 解放大桥: 11, 江湾大桥: 12, 海印大桥: 15, 广州大桥: 12, 广州大桥新桥: 12, 猎德大桥: 13, 华南大桥: 16, 琶洲大桥: 16, 鹤洞大桥: 22, 珠江大桥东桥: 10, 珠江大桥西桥: 10 };
+// ---- 跨河桥：逐段检测主水系的区段，按位置聚类成桥 ----
+const DECK = {};
 const crossings = [];
 roads.forEach((r, ri) => {
   r.river = false;
@@ -334,7 +348,7 @@ for (const cl of clusters) {
   const lc = (l0 + l1) / 2;
   const ox = -d[1] * lc;
   const oz = d[0] * lc;
-  const deckH = DECK[name] ?? 12;
+  const deckH = DECK[name] ?? 10;
   for (const it of cl.items) {
     const r = roads[it.ri];
     r.river = true;
@@ -417,7 +431,7 @@ for (const r of roads) {
 }
 
 // ====================================================================================
-// 3. 分区（参考广州实际行政与功能片区的近似范围）
+// 3. 成都分区：以真实核心坐标与锦江滨水界面为中心的观感规则。
 // ====================================================================================
 const Z = (lon0, lat0, lon1, lat1) => {
   const [x0, z1] = proj(lon0, lat0);
@@ -425,21 +439,19 @@ const Z = (lon0, lat0, lon1, lat1) => {
   return [x0, z0, x1, z1];
 };
 const ZONES = [
-  ['shamian', Z(113.2355, 23.1068, 113.2478, 23.1118)],
-  ['ersha', Z(113.2885, 23.1068, 113.3112, 23.1168)],
-  ['cbd', Z(113.3085, 23.1135, 113.3395, 23.1368)],
-  ['tianhe', Z(113.3040, 23.1368, 113.3480, 23.1560)],
-  ['pazhou', Z(113.3280, 23.0860, 113.3900, 23.1115)],
-  ['xiguan', Z(113.2270, 23.1110, 113.2625, 23.1430)],
-  ['yuexiu', Z(113.2625, 23.1120, 113.2960, 23.1430)],
-  ['haizhuold', Z(113.2480, 23.0930, 113.2950, 23.1105)],
-  ['fangcun', Z(113.2050, 23.0800, 113.2420, 23.1060)],
+  ['chunxi', Z(104.071, 30.650, 104.094, 30.667)],
+  ['taikooli', Z(104.074, 30.648, 104.089, 30.660)],
+  ['jiangtan', Z(104.068, 30.632, 104.100, 30.650)],
+  ['jiuyan', Z(104.080, 30.625, 104.101, 30.643)],
+  ['south', Z(104.057, 30.549, 104.170, 30.625)],
+  ['historic', Z(104.060, 30.645, 104.078, 30.670)],
+  ['modern', Z(104.095, 30.635, 104.168, 30.672)],
 ];
 function zoneAt(x, z) {
   for (const [id, b] of ZONES) if (x >= b[0] && x <= b[2] && z >= b[1] && z <= b[3]) return id;
   return 'res';
 }
-const OLD = new Set(['xiguan', 'yuexiu', 'haizhuold']);
+const OLD = new Set(['historic', 'taikooli']);
 const ZONE_IDS = ['res', ...ZONES.map((z) => z[0])];
 
 // ====================================================================================
@@ -492,7 +504,13 @@ log('ground polys', ground.length);
 // 5. 建筑
 // ====================================================================================
 const bldRaw = new Map();
-for (const f of ['bld-1.json', 'bld-2.json', 'bld-3.json', 'bld-4.json']) for (const e of load(f).els) bldRaw.set(e.k + e.id, e);
+for (const f of ['bld-1.json', 'bld-2.json', 'bld-3.json', 'bld-4.json']) {
+  if (!fs.existsSync(RAW + f)) continue;
+  for (const e of load(f).els) bldRaw.set(e.k + e.id, e);
+}
+let nBuildingsInBoundary = 0;
+let nBuildingsOutsideBoundary = 0;
+let nBuildingsWaterRejected = 0;
 for (const e of load('relations.json').els) if (e.t.building) bldRaw.set('r' + e.id, e);
 const num = (v) => {
   if (v === undefined || v === null) return NaN;
@@ -501,143 +519,10 @@ const num = (v) => {
 };
 
 // ---- 专项地标：替换为程序化精细模型的 OSM 要素 ----
-const LM = {
-  cantonTower: LL(113.31914, 23.10899),
-  ifc: LL(113.31786, 23.12032),
-  ctf: LL(113.32058, 23.12026),
-  citic: LL(113.3195, 23.1444),
-  opera: LL(113.31722, 23.11785),
-};
+const LM = { ctf: [0, 0], citic: [0, 0] };
 const landmarks = [];
-const exclusion = []; // {ring} 或 {c, r}：落在其中的 OSM 建筑被移除
-
-function polyFromId(key) {
-  const e = bldRaw.get(key);
-  if (e) return polysOf(e)[0];
-  return null;
-}
-function landPoly(id) {
-  const e = landRaw.find((x) => x.id === id) || load('misc.json').els.find((x) => x.id === id);
-  if (!e) return null;
-  return polysOf(e)[0] || (e.g && e.g.length > 3 ? { outer: cleanRing(e.g.map(P)), holes: [] } : null);
-}
+const exclusion = [];
 const misc = load('misc.json').els;
-{
-  // 广州塔
-  const c = LM.cantonTower;
-  landmarks.push({ kind: 'cantonTower', x: c[0], z: c[1] });
-  exclusion.push({ c, r: 75 });
-  // 广州大剧院（扎哈·哈迪德“双砾石”）
-  const op = polyFromId('r10061850');
-  if (op) {
-    const mr = minRect(op.outer);
-    landmarks.push({ kind: 'opera', x: mr.cx, z: mr.cz, rot: Math.atan2(-mr.uz, mr.ux), w: mr.w, d: mr.d });
-    exclusion.push({ ring: op.outer, pad: 4 });
-  }
-  // 天河体育场
-  const st = landRaw.find((x) => x.id === 29162424);
-  if (st) {
-    const ring = cleanRing(st.g.map(P));
-    const mr = minRect(ring);
-    landmarks.push({ kind: 'stadium', x: mr.cx, z: mr.cz, rot: Math.atan2(-mr.uz, mr.ux), rx: mr.w / 2, rz: mr.d / 2 });
-    exclusion.push({ ring, pad: 2 });
-  }
-  // 陈家祠
-  const ch = misc.find((x) => x.id === 520935699);
-  if (ch) {
-    const ring = cleanRing(ch.g.map(P));
-    const mr = minRect(ring);
-    // 正门朝南：取最接近南北向的轴作为进深方向
-    let ux = mr.ux;
-    let uz = mr.uz;
-    let w = mr.w;
-    let d = mr.d;
-    if (Math.abs(uz) > Math.abs(ux)) {
-      [ux, uz] = [-uz, ux];
-      [w, d] = [d, w];
-    }
-    if (ux < 0) {
-      ux = -ux;
-      uz = -uz;
-    }
-    landmarks.push({ kind: 'chen', x: mr.cx, z: mr.cz, ux, uz, w, d });
-    exclusion.push({ ring, pad: 3 });
-  }
-  // 六榕花塔 / 琶洲塔
-  for (const [key, name, h] of [['w146674383', '六榕花塔', 57], ['w487011306', '琶洲塔', 59]]) {
-    const p = polyFromId(key);
-    if (!p) continue;
-    const c2 = centroid(p.outer);
-    landmarks.push({ kind: 'pagoda', x: c2[0], z: c2[1], name, h });
-    exclusion.push({ c: c2, r: 16 });
-  }
-  // 广东电视塔（越秀山）
-  {
-    const p = polyFromId('w146688566');
-    if (p) {
-      const c2 = centroid(p.outer);
-      landmarks.push({ kind: 'tvTower', x: c2[0], z: c2[1], h: 200 });
-      exclusion.push({ c: c2, r: 20 });
-    }
-  }
-  // 周大福金融中心（东塔）：切角方形平面，四段收分 + 冠顶，白色竖向陶板肋
-  {
-    const p = polyFromId('w511404889');
-    if (p) {
-      const mr = minRect(p.outer);
-      landmarks.push({ kind: 'ctf', x: mr.cx, z: mr.cz, ux: mr.ux, uz: mr.uz, w: Math.min(mr.w, mr.d), h: 530 });
-      exclusion.push({ c: [mr.cx, mr.cz], r: Math.max(mr.w, mr.d) * 0.62 });
-    }
-  }
-  // 中山纪念堂：八角重檐攒尖蓝琉璃瓦顶 + 四面抱厦
-  {
-    const p = polyFromId('w613715001');
-    if (p) {
-      const mr = minRect(p.outer);
-      landmarks.push({ kind: 'memorial', x: mr.cx, z: mr.cz, ux: mr.ux, uz: mr.uz, w: Math.max(mr.w, mr.d) });
-      exclusion.push({ ring: p.outer, pad: 2 });
-    }
-  }
-  // 石室圣心大教堂：花岗岩哥特式双尖塔（正立面朝钟楼方向）
-  {
-    const p = polyFromId('w542890833');
-    const t1 = polyFromId('w932452311');
-    if (p) {
-      const mr = minRect(p.outer);
-      const c = centroid(p.outer);
-      const tc = t1 ? centroid(t1.outer) : [c[0], c[1] + 30];
-      let fx = tc[0] - c[0];
-      let fz = tc[1] - c[1];
-      const fl = Math.hypot(fx, fz) || 1;
-      fx /= fl;
-      fz /= fl;
-      // 长轴取与正立面方向最接近的矩形轴
-      const along = Math.abs(mr.ux * fx + mr.uz * fz) > 0.7;
-      const L = along ? mr.w : mr.d;
-      const W = along ? mr.d : mr.w;
-      landmarks.push({ kind: 'cathedral', x: mr.cx, z: mr.cz, fx, fz, L: Math.max(L, 60), W: Math.max(W, 28) });
-      exclusion.push({ c: [mr.cx, mr.cz], r: Math.max(L, W) * 0.62 });
-    }
-  }
-  // 镇海楼（越秀山五层楼）
-  {
-    const p = polyFromId('w146688561');
-    if (p) {
-      const mr = minRect(p.outer);
-      landmarks.push({ kind: 'zhenhai', x: mr.cx, z: mr.cz, ux: mr.ux, uz: mr.uz, w: mr.w, d: mr.d });
-      exclusion.push({ ring: p.outer, pad: 2 });
-    }
-  }
-  // 海心桥（人行拱桥）
-  const hx = misc.find((x) => x.id === 1313608038);
-  if (hx) {
-    const ring = cleanRing(hx.g.map(P));
-    const mr = minRect(ring);
-    const L = Math.max(mr.w, mr.d);
-    const ax = mr.w >= mr.d ? [mr.ux, mr.uz] : [-mr.uz, mr.ux];
-    landmarks.push({ kind: 'haixin', a: [mr.cx - ax[0] * L * 0.5, mr.cz - ax[1] * L * 0.5], b: [mr.cx + ax[0] * L * 0.5, mr.cz + ax[1] * L * 0.5], w: Math.min(mr.w, mr.d) });
-  }
-}
 const excluded = (c, ring) => {
   for (const ex of exclusion) {
     if (ex.c && Math.hypot(c[0] - ex.c[0], c[1] - ex.c[1]) < ex.r) return true;
@@ -663,10 +548,12 @@ for (const [key, e] of bldRaw) {
     if (Math.abs(a) < 12) continue;
     if (a < 0) outer = outer.reverse(); // 统一为 z 向下坐标系中的正面积（逆时针俯视）
     const c = centroid(outer);
-    if (!inCity(c[0], c[1], 150)) continue;
-    if (sdAll(c[0], c[1]) < -2) continue;
+    if (!inCity(c[0], c[1], CITY_CONFIG.boundaryBufferMeters + 150)) continue;
+    const admin = inAdmin(c[0], c[1]);
+    if (admin) nBuildingsInBoundary++; else nBuildingsOutsideBoundary++;
+    if (sdAll(c[0], c[1]) < -2 || outer.filter((p) => sdAll(p[0], p[1]) < -2).length > outer.length * 0.5) { nBuildingsWaterRejected++; continue; }
     const holes = p.holes.map((h) => dropCollinear(simplify(h, 0.35, true))).filter((h) => h.length >= 3 && Math.abs(area(h)) > 20).map((h) => (area(h) > 0 ? h.reverse() : h));
-    const rec = { key, t, outer, holes, c, a: Math.abs(a), bb: bbox(outer) };
+    const rec = { key, t, outer, holes, c, a: Math.abs(a), bb: bbox(outer), admin };
     if (t['building:part'] && !t.building) parts.push(rec);
     else if (t['building:part']) parts.push(rec);
     else outlines.push(rec);
@@ -733,13 +620,12 @@ const villageAt = (x, z) => {
 const DEF_LVL = {
   //        <120 <400 <1500 <4000 >4000
   old: [4, 6, 8, 8, 5],
-  cbd: [3, 6, 12, 8, 5],
-  tianhe: [4, 8, 16, 8, 5],
-  pazhou: [3, 6, 12, 6, 5],
+  modern: [3, 6, 12, 8, 5],
+  chunxi: [3, 6, 12, 8, 5],
+  taikooli: [3, 5, 8, 7, 5],
   res: [4, 7, 12, 6, 5],
-  shamian: [3, 4, 4, 4, 3],
-  ersha: [3, 3, 4, 4, 3],
-  fangcun: [4, 7, 10, 5, 4],
+  historic: [3, 4, 6, 5, 3],
+  south: [4, 7, 10, 5, 4],
 };
 function estimateHeight(b, zone) {
   const sc = sizeClass(b.a);
@@ -903,7 +789,7 @@ for (const b of bl) {
   const old = OLD.has(zone);
   let qe = [];
   if (old && h <= 40 && !b.part && b.a < 3000 && qilouRoads.length) qe = qilouEdges(b);
-  const village = !old && zone !== 'cbd' && b.a < 260 && villageAt(b.c[0], b.c[1]) >= 16 && h < 36;
+  const village = !old && zone !== 'modern' && b.a < 260 && villageAt(b.c[0], b.c[1]) >= 16 && h < 36;
 
   if (qe.length) {
     style = ST.QILOU;
@@ -916,7 +802,7 @@ for (const b of bl) {
     p2 = r.next();
     for (const e of qe) qEdges.push(BLD.length, e);
     nQilou++;
-  } else if (zone === 'shamian' && h < 30) {
+  } else if (zone === 'historic' && h < 30) {
     style = ST.COLONIAL;
     colA = pick(PAL.colonial, r.next());
     colB = hex('#f2efe8');
@@ -925,7 +811,7 @@ for (const b of bl) {
     lit = 0.4;
     if (rect > 0.8 && b.a < 1800) roof = r.chance(0.6) ? ROOF.HIP : ROOF.FLAT;
   } else if (tall && (OFFICE.test(typ) || typ === 'yes' || /glass/.test(t['building:material'] || '')) && (!/apartments|residential/.test(typ))) {
-    const curtain = zone === 'cbd' || zone === 'tianhe' || zone === 'pazhou' ? r.chance(0.85) : r.chance(0.55);
+    const curtain = zone === 'modern' || zone === 'chunxi' ? r.chance(0.85) : r.chance(0.55);
     style = curtain ? ST.CURTAIN : ST.PUNCHED;
     colA = curtain ? pick(PAL.glass, r.next()) : pick(PAL.stone, r.next());
     colB = curtain ? pick(PAL.mull, r.next()) : pick(PAL.glass, r.next());
@@ -999,7 +885,7 @@ for (const b of bl) {
     p1 = wash ? 1 : 0;
     if (rect > 0.78 && b.a < 700) roof = ROOF.GABLE;
   } else if (/house|detached|terrace|temple|church|chapel|shrine/.test(typ)) {
-    style = zone === 'ersha' ? ST.COLONIAL : ST.BRICK;
+    style = zone === 'historic' ? ST.COLONIAL : ST.BRICK;
     colA = style === ST.COLONIAL ? pick(PAL.colonial, r.next()) : pick(PAL.brick, r.next());
     colB = hex('#f2efe8');
     floorH = 3.6;
@@ -1007,7 +893,7 @@ for (const b of bl) {
     lit = 0.4;
     if (rect > 0.78 && b.a < 900) roof = r.chance(0.6) ? ROOF.HIP : ROOF.GABLE;
   } else if (h >= 40) {
-    const res = !(zone === 'cbd' || zone === 'tianhe' || zone === 'pazhou') && r.chance(0.65);
+    const res = !(zone === 'modern' || zone === 'chunxi') && r.chance(0.65);
     style = res ? ST.RESI : r.chance(0.6) ? ST.CURTAIN : ST.PUNCHED;
     colA = res ? pick(PAL.resWall, r.next()) : style === ST.CURTAIN ? pick(PAL.glass, r.next()) : pick(PAL.stone, r.next());
     colB = res ? pick(PAL.resTrim, r.next()) : style === ST.CURTAIN ? pick(PAL.mull, r.next()) : pick(PAL.glass, r.next());
@@ -1025,17 +911,7 @@ for (const b of bl) {
     if (nearMain || old) p1 = 1;
     flags |= 2;
   }
-  // ---- 指定地标的立面 ----
-  if (b.key === 'w184738716') {
-    style = ST.DIAGRID;
-    colA = hex('#9fb3bd');
-    colB = hex('#eef0f1');
-    floorH = 4.5;
-    cellW = 1.6;
-    lit = 0.75;
-    h = 440;
-    landmarks.push({ kind: 'label', name: '西塔 · 广州国际金融中心', sub: 'IFC · 440 m', x: b.c[0], z: b.c[1], y: 480, tier: 2 });
-  }
+  // 命名地标保持 OSM 轮廓与高度，不再用外部城市专属体量覆盖。
   if (b.part && Math.hypot(b.c[0] - LM.ctf[0], b.c[1] - LM.ctf[1]) < 60) {
     style = ST.FINS;
     colA = hex('#56656b');
@@ -1052,38 +928,16 @@ for (const b of bl) {
     floorH = 4.0;
     cellW = 2.2;
   }
-  if (name === '广东省博物馆') {
-    style = ST.STONE;
-    colA = hex('#3d3736');
-    colB = hex('#c9c1b3');
-    h = 44;
-    base = 0;
-    floorH = 5.5;
-    cellW = 6;
-    lit = 0.15;
-  }
-  if (name === '广州图书馆') {
-    style = ST.FINS;
-    colA = hex('#8c9296');
-    colB = hex('#d9d4c8');
-    h = 50;
-    cellW = 1.8;
-  }
   // 临江楼宇灯光秀
   if (h > 60 && sdm < 260 && sdm > 0 && style !== ST.RESI) led = led || r.pickW([1, 2, 3], [3, 3, 1]);
   else if (h > 60 && sdm < 260 && sdm > 0) led = r.chance(0.5) ? r.pickW([1, 2], [2, 1]) : 0;
   else if (h > 150) led = led || r.pickW([0, 1, 3], [2, 2, 1]);
   if (sdm < 300) flags |= 8;
   if (roof === ROOF.FLAT && (h < 4 || b.a < 25)) roof = ROOF.PLAIN;
-  // 琶洲广交会展馆：大跨度展厅 + 波浪形金属屋面，玻璃幕墙
-  if (zone === 'pazhou' && b.a > 12000 && h < 45 && !b.part) {
-    roof = ROOF.WAVE;
-    style = ST.PODIUM;
-    colA = hex('#c9ced1');
-    colB = hex('#6f858e');
-    floorH = 6;
-    cellW = 3;
-    h = Math.max(h, 24);
+  // 成都商业综合体常见的大跨度浅屋面。
+  if ((zone === 'modern' || zone === 'chunxi') && b.a > 12000 && h < 45 && !b.part) {
+    roof = ROOF.WAVE; style = ST.PODIUM; colA = hex('#c9ced1'); colB = hex('#6f858e');
+    floorH = 6; cellW = 3; h = Math.max(h, 24);
   }
   if (t['roof:shape'] === 'gabled' && rect > 0.7) roof = ROOF.GABLE;
   if (t['roof:shape'] === 'hipped' && rect > 0.7) roof = ROOF.HIP;
@@ -1097,52 +951,17 @@ const lab = (name, sub, lon, lat, y, tier, district = false) => {
   const [x, z] = LL(lon, lat);
   LABELS.push({ name, sub, x, z, y, tier, district });
 };
-lab('珠江新城 CBD', 'ZHUJIANG NEW TOWN', 113.3265, 23.1265, 320, 1, true);
-lab('天河路商圈', 'TIANHE ROAD', 113.3255, 23.1335, 180, 1, true);
-lab('琶洲 · 互联网总部集聚区', 'PAZHOU', 113.3445, 23.1045, 260, 1, true);
-lab('海珠', 'HAIZHU', 113.2905, 23.0990, 90, 1, true);
-lab('越秀 · 千年老城', 'YUEXIU', 113.2700, 23.1275, 90, 1, true);
-lab('西关 · 荔湾老城', 'XIGUAN', 113.2445, 23.1245, 70, 1, true);
-lab('白鹅潭', 'BAIETAN', 113.2338, 23.1030, 25, 1, true);
-lab('珠江 · 前航道', 'PEARL RIVER', 113.2860, 23.1108, 25, 1, true);
-lab('二沙岛', 'ERSHA ISLAND', 113.3000, 23.1128, 40, 1, true);
-lab('东山口', 'DONGSHANKOU', 113.2955, 23.1255, 60, 1, true);
-lab('芳村', 'FANGCUN', 113.2270, 23.0960, 50, 1, true);
-lab('广州塔', 'Canton Tower · 600 m', 113.31914, 23.10899, 640, 0);
-lab('东塔 · 周大福金融中心', 'CTF · 530 m', 113.32058, 23.12026, 565, 2);
-lab('中信广场', 'CITIC Plaza · 391 m', 113.3195, 23.1444, 430, 2);
-lab('广州大剧院', 'Opera House', 113.31722, 23.11785, 70, 3);
-lab('广东省博物馆', 'Guangdong Museum', 113.32115, 23.11749, 70, 3);
-lab('广州图书馆', 'Guangzhou Library', 113.32055, 23.11896, 75, 3);
-lab('花城广场', 'Huacheng Square', 113.3192, 23.1240, 30, 3);
-lab('海心沙', 'Haixinsha', 113.31943, 23.11415, 30, 3);
-lab('海心桥', 'Haixin Bridge', 113.3139, 23.1110, 50, 3);
-lab('天河体育中心', 'Tianhe Sports Center', 113.31938, 23.14058, 70, 3);
-lab('星海音乐厅', 'Xinghai Concert Hall', 113.30021, 23.11050, 45, 3);
-lab('陈家祠', 'Chen Clan Academy', 113.24006, 23.12993, 40, 2);
-lab('永庆坊', 'Yongqingfang', 113.23398, 23.11727, 30, 3);
-lab('上下九步行街', 'Shangxiajiu', 113.24293, 23.11750, 40, 2);
-lab('北京路步行街', 'Beijing Road', 113.26399, 23.12327, 45, 2);
-lab('石室圣心大教堂', 'Sacred Heart Cathedral', 113.25473, 23.11737, 75, 3);
-lab('中山纪念堂', 'Sun Yat-sen Memorial Hall', 113.25947, 23.13570, 55, 3);
-lab('越秀公园 · 镇海楼', 'Yuexiu Park', 113.26025, 23.14059, 60, 3);
-lab('六榕花塔', 'Flower Pagoda', 113.25473, 23.13094, 85, 3);
-lab('广东电视塔', 'TV Tower · 200 m', 113.26415, 23.14374, 240, 3);
-lab('沙面', 'Shamian Island', 113.2412, 23.1093, 45, 2);
-lab('白天鹅宾馆', 'White Swan Hotel', 113.23736, 23.10853, 110, 3);
-lab('爱群大厦', 'Oi Kwan Building', 113.25153, 23.11211, 95, 3);
-lab('琶洲 · 广交会展馆', 'Canton Fair Complex', 113.3594, 23.1025, 70, 2);
-lab('琶洲塔', 'Pazhou Pagoda', 113.37027, 23.10175, 85, 3);
-lab('流花湖公园', 'Liuhua Lake Park', 113.2447, 23.1388, 30, 3);
-lab('荔湾湖公园', 'Liwan Lake Park', 113.2284, 23.1243, 30, 3);
-lab('珠江公园', 'Pearl River Park', 113.3338, 23.1228, 30, 3);
-lab('中山大学', 'Sun Yat-sen University', 113.2960, 23.0975, 40, 3);
-lab('猎德村', 'Liede Village', 113.3290, 23.1170, 60, 3);
+lab('春熙路商圈', 'CHUNXI ROAD', 104.0817, 30.6572, 110, 1, true);
+lab('成都太古里', 'TAIKOO LI', 104.0812, 30.6548, 80, 2, true);
+lab('合江亭 · 锦江', 'HEJIANGTING · JINJIANG RIVER', 104.0872, 30.6462, 60, 2, true);
+lab('安顺廊桥', 'ANSHUN BRIDGE', 104.0770, 30.6420, 55, 2, true);
+lab('九眼桥', 'JIUYAN BRIDGE', 104.0896, 30.6344, 70, 2, true);
+lab('锦江区', 'JINJIANG DISTRICT', 104.094, 30.653, 160, 1, true);
 
 // ====================================================================================
 // 6. 跨江桥（按桥名合并双幅）
 // ====================================================================================
-const KIND = { 海印大桥: 'cable1', 猎德大桥: 'liede', 海珠桥: 'arch', 解放大桥: 'tubearch', 人民桥: 'girder', 江湾大桥: 'girder', 广州大桥: 'girder', 广州大桥新桥: 'girder', 华南大桥: 'girder', 琶洲大桥: 'vstrut', 鹤洞大桥: 'cable', 珠江大桥东桥: 'truss', 珠江大桥西桥: 'truss', 鹅潭大桥: 'girder' };
+const KIND = {};
 for (let i = bridges.length - 1; i >= 0; i--) {
   const m = [(bridges[i].a[0] + bridges[i].b[0]) / 2, (bridges[i].a[1] + bridges[i].b[1]) / 2];
   if (!inCity(m[0], m[1], 600) || /引桥/.test(bridges[i].name)) bridges.splice(i, 1);
@@ -1224,7 +1043,7 @@ function emitFill(cx, cz, ux, uz, w, d, spec) {
   markRect(cx, cz, ux, uz, w, d);
 }
 const frng = new RNG(88801);
-const FILL_ZONES = new Set(['xiguan', 'yuexiu', 'haizhuold', 'res', 'fangcun']);
+const FILL_ZONES = new Set(['res']);
 function lotSpec(zone, kind, r) {
   const old = OLD.has(zone);
   if (kind === 'qilou') {
@@ -1376,15 +1195,12 @@ function put(sp, x, z, s, opt = {}) {
 }
 const pickSp = (zone, rr) => {
   switch (zone) {
-    case 'cbd':
-    case 'pazhou':
+    case 'modern':
+    case 'chunxi':
       return rr < 0.5 ? TREE.PALM : rr < 0.72 ? TREE.BROAD : rr < 0.88 ? TREE.BANYAN : TREE.FANPALM;
-    case 'tianhe':
+    case 'taikooli':
       return rr < 0.35 ? TREE.PALM : rr < 0.7 ? TREE.BROAD : TREE.BANYAN;
-    case 'xiguan':
-    case 'yuexiu':
-    case 'haizhuold':
-    case 'shamian':
+    case 'historic':
       return rr < 0.62 ? TREE.BANYAN : rr < 0.85 ? TREE.BROAD : TREE.KAPOK;
     default:
       return rr < 0.4 ? TREE.BANYAN : rr < 0.72 ? TREE.BROAD : rr < 0.84 ? TREE.KAPOK : rr < 0.93 ? TREE.FANPALM : TREE.PALM;
@@ -1446,7 +1262,7 @@ for (const r of roads) {
       let t = c0 + 4;
       const zone = zoneAt(a[0], a[1]);
       while (t < len - c1 - 4) {
-        const sp = zone === 'cbd' || zone === 'pazhou' || zone === 'tianhe' ? TREE.PALM : trng.chance(0.5) ? TREE.FANPALM : TREE.BROAD;
+        const sp = zone === 'modern' || zone === 'chunxi' ? TREE.PALM : trng.chance(0.5) ? TREE.FANPALM : TREE.BROAD;
         put(sp, a[0] + tx * t, a[1] + tz * t, scaleFor(sp) * 0.9, { force: true });
         t += 12;
       }
@@ -1471,10 +1287,10 @@ for (const r of roads) {
     }
   }
 }
-// 3) 公园 / 绿地 / 林地（珠江新城的广场式公园如花城广场：大草坪上稀疏的大王椰与蒲葵）
+// 3) 公园 / 绿地 / 林地（商业区广场使用稀疏的棕榈与阔叶树）
 for (const g of greenPolys) {
   const [x0, z0, x1, z1] = bbox(g.outer);
-  const plaza = g.kind !== GK.FOREST && zoneAt(...centroid(g.outer)) === 'cbd';
+  const plaza = g.kind !== GK.FOREST && ['modern', 'chunxi', 'taikooli'].includes(zoneAt(...centroid(g.outer)));
   const sp0 = plaza ? 26 : g.kind === GK.FOREST ? 11 : g.kind === GK.GARDEN ? 13 : 19;
   for (let x = x0 + sp0 * 0.5; x < x1; x += sp0) {
     for (let z = z0 + sp0 * 0.5; z < z1; z += sp0) {
@@ -1485,7 +1301,7 @@ for (const g of greenPolys) {
       // 林间空地：低频噪声留出草坪
       if (g.kind !== GK.FOREST && rand01(Math.floor(px / 45), Math.floor(pz / 45), 17) < 0.3) continue;
       const zone = zoneAt(px, pz);
-      const sp = g.kind === GK.FOREST ? trng.pickW([TREE.BROAD, TREE.BANYAN, TREE.KAPOK], [5, 3, 1]) : plaza ? trng.pickW([TREE.PALM, TREE.FANPALM, TREE.BANYAN], [6, 2, 1]) : zone === 'cbd' ? trng.pickW([TREE.PALM, TREE.BANYAN, TREE.BROAD, TREE.KAPOK], [4, 3, 2, 1]) : trng.pickW([TREE.BANYAN, TREE.BROAD, TREE.KAPOK, TREE.PALM, TREE.FANPALM], [3.5, 3, 1.2, 1.3, 1]);
+      const sp = g.kind === GK.FOREST ? trng.pickW([TREE.BROAD, TREE.BANYAN, TREE.KAPOK], [5, 3, 1]) : plaza ? trng.pickW([TREE.PALM, TREE.FANPALM, TREE.BANYAN], [6, 2, 1]) : trng.pickW([TREE.BANYAN, TREE.BROAD, TREE.KAPOK, TREE.PALM, TREE.FANPALM], [3.5, 3, 1.2, 1.3, 1]);
       put(sp, px, pz, scaleFor(sp) * 1.08, { rad: 1 });
     }
   }
@@ -1648,17 +1464,13 @@ for (const g of ground) {
 log('ground tris', gKind.length);
 
 // ====================================================================================
-// 8b. 地形：越秀山与北部远山；道路、建筑、补全地块、地块铺装、树木、路灯、地标与标注随地形抬升
+// 8b. 地形：当前为平缓地面降级；道路、建筑、地块、树木和路灯随高度场抬升
 // ====================================================================================
 const TERRAIN = (() => {
-  // 越秀山的山体范围：OSM 越秀公园（w255622888）、公园内山林（r12583382）
+  // 锦江区当前使用平缓地面；接入 DEM 后沿用同一高度场接口。
   const hillRings = [];
-  for (const e of landRaw) {
-    if (e.k === 'w' && e.id === 255622888 && e.g && e.g.length > 3) hillRings.push(e.g.map(P));
-    if (e.k === 'r' && e.id === 12583382) for (const m of e.m || []) if (m.r === 'outer' && m.g?.length > 3) hillRings.push(m.g.map(P));
-  }
-  const [x0, z0] = proj(113.13, 23.32);
-  const [x1, z1] = proj(113.47, 23.02);
+  const [x0, z0] = proj(CITY_CONFIG.outerBbox.west, CITY_CONFIG.outerBbox.north);
+  const [x1, z1] = proj(CITY_CONFIG.outerBbox.east, CITY_CONFIG.outerBbox.south);
   return buildTerrain({ rawDir: RAW, hillRings, sdAll, region: { x0, z0, x1, z1 } });
 })();
 const HT = TERRAIN.H;
@@ -1750,17 +1562,26 @@ const HT = TERRAIN.H;
     if (inCity((a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, 200) && onHill(a, b, c)) split(a, b, c, kinds[t], 0);
     else emit(a, b, c, kinds[t]);
   }
-  log('terrain max', TERRAIN.max.toFixed(0), 'm', TERRAIN.hasDem ? '' : '（无 DEM，仅越秀山）', 'road pts +', nDense, 'ground tris', kinds.length, '→', gKind.length);
+  log('terrain max', TERRAIN.max.toFixed(0), 'm', TERRAIN.hasDem ? '' : '（无 DEM，平面降级）', 'road pts +', nDense, 'ground tris', kinds.length, '→', gKind.length);
 }
 
 // ====================================================================================
 // 9. 输出
 // ====================================================================================
-const { renderIdentity, ...evidenceDocument } = buildCityEvidence({ rawDir: RAW, renderBuildingKeys: BLD.map((b) => b.b.key), renderRoadIds: roads.map((r) => r.id) });
+const evidenceBuild = CITY_CONFIG.id === 'chengdu-jinjiang'
+  ? {
+      renderIdentity: { buildings: BLD.map((b) => `osm:${b.b.key}`), roads: roads.map((r) => `osm:w${r.id}`) },
+      version: 1, coordinateSystem: 'WGS84 longitude,latitude; heights are relative unless documented',
+      sources: { osmCity: { license: 'ODbL-1.0', attribution: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright' } },
+      entities: Object.fromEntries([...BLD.map((b) => [`osm:${b.b.key}`, { id: `osm:${b.b.key}`, sourceId: 'osmCity', kind: 'building', tags: b.b.t }]), ...roads.map((r) => [`osm:w${r.id}`, { id: `osm:w${r.id}`, sourceId: 'osmCity', kind: 'road', tags: {} }])]),
+      networks: [], candidates: [], photos: {}, coverage: { topology: [], facadeEntityIds: [] }, precision: { absolutePosition: 'unverified', measuredHeight: 'unverified', allFacades: 'incomplete' },
+    }
+  : buildCityEvidence({ rawDir: RAW, renderBuildingKeys: BLD.map((b) => b.b.key), renderRoadIds: roads.map((r) => r.id) });
+const { renderIdentity, ...evidenceDocument } = evidenceBuild;
 // 两个数据文件：0 = 首屏（水系、道路、建筑、地块），1 = 植被与路灯（首屏之后加载）
 const FILES = [
-  { name: 'guangzhou.bin', bufs: [], offset: 0 },
-  { name: 'guangzhou-veg.bin', bufs: [], offset: 0 },
+  { name: 'chengdu.bin', bufs: [], offset: 0 },
+  { name: 'chengdu-veg.bin', bufs: [], offset: 0 },
 ];
 const sections = {};
 const packed = {};
@@ -1867,7 +1688,7 @@ addSection('terrain', TERRAIN.grid.data);
 }
 for (let s = 0; s < 5; s++) addPacked(`trees${s}`, trees[s], 'tree', SCHEMA.TREE_REC.N, 1);
 addPacked('lamps', lamps, 'lamp', SCHEMA.LAMP.N, 1);
-// 珠江游船航线：沿前航道逐列追踪深水区间中线（白鹅潭 → 琶洲）
+// 锦江游船航线：沿主航道逐列追踪深水区间中线。
 {
   const track = (x0, x1, dir, start) => {
     const out = [];
@@ -1895,7 +1716,7 @@ addPacked('lamps', lamps, 'lamp', SCHEMA.LAMP.N, 1);
     }
     return out;
   };
-  const [sx, sz0] = proj(113.275, 23.112);
+  const [sx, sz0] = proj(CITY_CONFIG.core.hejiangting[0], CITY_CONFIG.core.hejiangting[1]);
   let sz = sz0;
   {
     let best = 1e9;
@@ -1907,8 +1728,8 @@ addPacked('lamps', lamps, 'lamp', SCHEMA.LAMP.N, 1);
       }
     }
   }
-  const [wx] = proj(113.2385, 23.1);
-  const [ex] = proj(113.385, 23.1);
+  const [wx] = proj(CITY_CONFIG.outerBbox.west, CITY_CONFIG.core.hejiangting[1]);
+  const [ex] = proj(CITY_CONFIG.outerBbox.east, CITY_CONFIG.core.hejiangting[1]);
   const west = track(sx, wx, -1, sz).reverse();
   const east = track(sx + 30, ex, 1, sz);
   const route = [...west, ...east];
@@ -1948,6 +1769,17 @@ const header = {
   version: SCHEMA.CITY_FORMAT_VERSION,
   renderSchemaVersion: SCHEMA.RENDER_SCHEMA_VERSION,
   source: 'OpenStreetMap contributors (ODbL) · Overpass API',
+  cityName: CITY_CONFIG.name,
+  cityId: CITY_CONFIG.id,
+  boundary: {
+    relation: CITY_CONFIG.boundaryRelation,
+    source: CITY_CONFIG.boundarySource,
+    bbox: CITY_CONFIG.boundaryBbox,
+    rings: boundaryRings.map(({ outer, holes }) => ({
+      outer: outer.map(([x, z]) => [+x.toFixed(2), +z.toFixed(2)]),
+      holes: holes.map((r) => r.map(([x, z]) => [+x.toFixed(2), +z.toFixed(2)])),
+    })),
+  },
   osmTimestamp: load('roads.json').ts,
   origin: { lon: LON0, lat: LAT0, kx: KX, kz: KZ },
   city: CITY,
@@ -1958,7 +1790,12 @@ const header = {
   landmarks,
   labels: LABELS,
   zones: ZONE_IDS,
-  stats: { fill: FILL.length, buildings: BLD.length, qilou: nQilou, tall: nTall, trees: nTrees, roads: roads.length, roadKm: Math.round(roads.reduce((s, r) => s + r.len, 0) / 1000), lamps: lamps.length / 6 },
+  stats: {
+    fill: FILL.length, buildings: BLD.length, qilou: nQilou, tall: nTall, trees: nTrees,
+    roads: roads.length, roadKm: Math.round(roads.reduce((s, r) => s + r.len, 0) / 1000), lamps: lamps.length / 6,
+    buildingsInBoundary: nBuildingsInBoundary, buildingsOutsideBoundary: nBuildingsOutsideBoundary,
+    buildingsWaterRejected: nBuildingsWaterRejected,
+  },
   terrain: { x0: TERRAIN.grid.x0, z0: TERRAIN.grid.z0, cs: TERRAIN.grid.cs, nx: TERRAIN.grid.nx, nz: TERRAIN.grid.nz },
   sections,
   packed,
@@ -1973,7 +1810,7 @@ const gzip = (buf) => {
 };
 const evidenceBytes = Buffer.from(JSON.stringify(evidenceDocument));
 const evidenceGzip = gzip(evidenceBytes);
-header.evidence = { version: 1, name: 'guangzhou-evidence.json.gz', size: evidenceGzip.length, raw: evidenceBytes.length };
+header.evidence = { version: 1, name: 'chengdu-evidence.json.gz', size: evidenceGzip.length, raw: evidenceBytes.length };
 fs.writeFileSync(OUT_DIR + header.evidence.name, evidenceGzip);
 let rawSize = 0;
 let gzSize = 0;
@@ -1986,7 +1823,7 @@ for (const F of FILES) {
   rawSize += buf.length;
   gzSize += gz.length;
 }
-fs.writeFileSync(OUT_DIR + 'guangzhou.json', JSON.stringify(header));
+fs.writeFileSync(OUT_DIR + 'chengdu.json', JSON.stringify(header));
 log('wrote', (rawSize / 1048576).toFixed(1), 'MB（gzip', (gzSize / 1048576).toFixed(1), 'MB）', JSON.stringify(header.stats));
 
 // ====================================================================================
@@ -2045,3 +1882,4 @@ if (DEBUG) {
 }
 void KZ;
 void LAT0;
+

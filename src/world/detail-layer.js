@@ -14,7 +14,7 @@ export function createDetailLayer(world,D){
   const stream=new DetailStream(manifest.tiles,{
     async load(tile,signal){
       const spec=resolveDetailAsset(tile,D.detailTrial);
-      const [response,module,labelModule]=await Promise.all([fetch(spec.url,{signal}),spec.prototype?import('../../prototypes/p2/models.js'):import('../models/detail-models.js'),import('../models/sample-labels.js')]);
+      const [response,module,labelModule]=await Promise.all([fetch(spec.url,{signal}),spec.prototype?import('../../prototypes/p2/models.js'):tile.city==='chengdu-jinjiang'?import('../models/chengdu-detail-models.js'):import('../models/detail-models.js'),import('../models/sample-labels.js')]);
       if(!response.ok)throw new Error(`Detail ${tile.id}: HTTP ${response.status}`);
       const payload=await response.json();if(payload.version!==1)throw new Error('Unsupported detail payload');
       if(spec.prototype&&payload.trialOnly!==true)throw new Error('Trial payload marker missing');
@@ -68,3 +68,4 @@ export function createDetailLayer(world,D){
   });
   return stream;
 }
+

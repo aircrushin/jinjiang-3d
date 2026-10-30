@@ -36,4 +36,4 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
   }
-}).listen(port, () => console.log(`广州 · 三维实景城市 → http://localhost:${port}`));
+}).listen(port, () => console.log(`锦江千年 · 成都 3D 数字城市 → http://localhost:${port}`));

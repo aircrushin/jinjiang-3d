@@ -1,5 +1,4 @@
-// 城市数据加载：data/guangzhou.json（元数据）+ guangzhou.bin（首屏：水系、道路、建筑、地块）
-// + guangzhou-veg.bin（树木、路灯、灯光投影，首屏数据到齐后再下载，D.vegReady 完成时可用）。
+// 成都锦江区城市数据加载：data/chengdu.json + chengdu.bin / chengdu-veg.bin。
 // 数据由 tools/build-city.mjs 从 OpenStreetMap 离线构建（© OpenStreetMap contributors, ODbL）。
 
 import { QUANT, unpackRecords, BLD, FILL, ROAD, RAIL, CHAIN, CITY_FORMAT_VERSION, RENDER_SCHEMA_VERSION } from './schema.js';
@@ -10,14 +9,14 @@ const TYPES = { Float32Array, Uint8Array, Uint16Array, Uint32Array, Int32Array, 
 
 export async function loadCity(onProgress,options={}) {
   const trialEnabled=options.detailTrial===true;
-  const meta = await fetch('./data/guangzhou.json').then((r) => r.json());
+  const meta = await fetch('./data/chengdu.json').then((r) => r.json());
   if (![1, CITY_FORMAT_VERSION].includes(meta.version)) throw new Error(`Unsupported city data version: ${meta.version}`);
   if (meta.version === CITY_FORMAT_VERSION && meta.renderSchemaVersion !== RENDER_SCHEMA_VERSION) throw new Error(`Unsupported render schema: ${meta.renderSchemaVersion}`);
   const files = meta.files;
   let detailManifestError=null;
   const detailAbort=new AbortController();
   const detailTimer=setTimeout(()=>detailAbort.abort(),2500);
-  const detailPromise=meta.version===CITY_FORMAT_VERSION?fetch(trialEnabled?'./data/detail/trial-manifest.json':'./data/detail/manifest.json',{signal:detailAbort.signal}).then(async r=>{
+  const detailPromise=meta.version===CITY_FORMAT_VERSION?fetch(meta.cityId==='chengdu-jinjiang'?'./data/detail/chengdu-p2-manifest.json':(trialEnabled?'./data/detail/trial-manifest.json':'./data/detail/manifest.json'),{signal:detailAbort.signal}).then(async r=>{
     if(!r.ok)throw new Error(`Detail manifest HTTP ${r.status}`);
     const manifest=validateDetailManifest(await r.json(),meta);
     if(manifest.trialOnly&&!trialEnabled)throw new Error('Trial manifest requires opt-in');
@@ -178,6 +177,7 @@ function decode(meta, S) {
     landmarks: meta.landmarks,
     labels: meta.labels,
     city: meta.city,
+    boundary: meta.boundary || null,
     trees: null,
     lamps: null,
     pools: null,
@@ -191,3 +191,4 @@ function decodeVeg(D) {
   D.pools = S.pools;
   return D;
 }
+
