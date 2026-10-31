@@ -169,6 +169,10 @@ body.ui-hidden #panel, body.ui-hidden #minimap, body.ui-hidden #hint, body.ui-hi
 .pt-tag.on { border-color: #fff4dc; }
 .pt-tag:focus-visible, .chip:focus-visible, .pt-hit:focus-visible, #pt-input:focus-visible { outline: 2px solid #e4b15a; outline-offset: 2px; }
 body.ui-hidden #patrol-tags { opacity: 0; pointer-events: none; }
+.pt-demo { width: 100%; height: 36px; margin-bottom: 8px; }
+.pt-demo[aria-pressed="true"] { border-color: #e4b15a; background: rgba(228, 177, 90, 0.14); color: #f6e7c8; }
+#patrol-caption { position: absolute; top: 16px; left: calc((100vw - 380px) / 2); transform: translateX(-50%); width: max-content; min-width: 280px; max-width: min(560px, calc(100vw - 800px)); padding: 10px 16px; background: var(--panel-solid); border: 1px solid var(--border-2); border-left: 3px solid #e4b15a; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: var(--text); font-size: 14px; line-height: 1.55; z-index: 4; pointer-events: none; }
+#patrol-caption[hidden] { display: none; }
 .pt-bar { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 6px; }
 .pt-bar .act { height: 32px; padding: 0 6px; font-size: 12px; }
 .pt-bar .act.on { border-color: #e4b15a; background: rgba(228, 177, 90, 0.14); color: #f6e7c8; }
@@ -239,4 +243,8 @@ body.ui-hidden #btn-show { opacity: 1; pointer-events: auto; }
   .attrib { margin: 0; flex: 1; text-align: right; font-size: 9px; }
   #minimap { display: none; }
   #status, #toast { margin-left: 0; }
+}
+
+@media (max-width: 1100px) {
+  #patrol-caption { left: 50%; top: 12px; min-width: 0; max-width: calc(100vw - 32px); }
 }

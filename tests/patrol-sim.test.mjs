@@ -153,3 +153,24 @@ test('同时未结事件有上限', () => {
   for (let i = 0; i < 20; i++) sim._spawnAuto();
   assert.ok(sim.incidents.length <= 3);
 });
+
+test('reset 回到初始状态，同一个种子再走一遍得到同样的过程', () => {
+  const sim = make({ seed: 3 });
+  sim.auto = true;
+  run(sim, 200);
+  const trace = () => sim.events.map((e) => `${e.t.toFixed(1)}|${e.text}`).join('\n');
+  const first = trace();
+  assert.ok(first.length > 0);
+
+  sim.reset();
+  assert.equal(sim.t, 0);
+  assert.equal(sim.auto, false);
+  assert.equal(sim.incidents.length, 0);
+  assert.equal(sim.events.length, 0);
+  assert.equal(sim.stats().resolved, 0);
+  assert.equal(sim.agent('dog-1').mode, 'patrol');
+
+  sim.auto = true;
+  run(sim, 200);
+  assert.equal(trace(), first);
+});

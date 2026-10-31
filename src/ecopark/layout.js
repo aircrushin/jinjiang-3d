@@ -285,7 +285,7 @@ export function buildEcoPark(D, areas = ZONE_AREAS, drains = DRAIN_POINTS) {
       placed.push(obb(g.x - g.nx * 6, g.z - g.nz * 6, g.tx, g.tz, GATE_HALF + 5, 7));
       clearOnly.push(obb(g.x + g.nx * 3, g.z + g.nz * 3, g.tx, g.tz, GATE_HALF + 2, 5));
       const name = `${zone.id}区大门`;
-      spots.gate.push({ x: g.x + g.nx * 6, z: g.z + g.nz * 6, label: name, sector: zone.id });
+      spots.gate.push({ x: g.x + g.nx * 6, z: g.z + g.nz * 6, label: '大门', sector: zone.id });
       pois.push({ name, kind: 'gate', x: g.x, z: g.z });
       stats.gates++;
     }
@@ -371,10 +371,10 @@ export function buildEcoPark(D, areas = ZONE_AREAS, drains = DRAIN_POINTS) {
       if (picked.every((p) => Math.hypot(p.x - f.x, p.z - f.z) > 60)) picked.push(f);
       if (picked.length >= 2) break;
     }
-    for (const f of picked) spots.fence.push({ x: f.x, z: f.z, label: `${zone.id}区围界`, sector: zone.id });
+    for (const f of picked) spots.fence.push({ x: f.x, z: f.z, label: '围界', sector: zone.id });
   }
   // 装卸区的“大门口占道”也算占道障碍的落点
-  for (const s of spots.loading) spots.gate.push({ ...s, label: `${s.sector}区装卸区` });
+  for (const s of spots.loading) spots.gate.push({ ...s, label: '装卸区' });
 
   // 5) 路口排水口
   for (const d of drains) {
