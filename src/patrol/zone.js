@@ -22,6 +22,16 @@ export const SECTORS = [
 
 export const HOME = { name: 'A区驻点', sector: 'A' };
 
+// 积水事件的落点：园区周边的几个路口，坐标取自路网节点，已核对都在道路上（偏差不超过 1 m）。
+// 是示意的“排水口”，不是实地测绘的排水设施。
+export const DRAIN_POINTS = [
+  { lon: 104.110816, lat: 30.587111 },
+  { lon: 104.110983, lat: 30.585223 },
+  { lon: 104.110983, lat: 30.583372 },
+  { lon: 104.113019, lat: 30.584438 },
+  { lon: 104.112048, lat: 30.586777 },
+];
+
 // 五个分区的真实轮廓（OSM way，经纬度），用来在场景里描出范围。
 export const ZONE_AREAS = [
   { id: 'A', name: 'A区', osm: 1568670319, ring: [[104.10844,30.58916],[104.108505,30.58722],[104.110489,30.587193],[104.110538,30.588832]] },
@@ -44,9 +54,12 @@ export const ROLE_NAME = { ground: '地面巡检', air: '空中巡检', human: '
 
 // needs：需要哪类智能体到场。parallel 为真时同时派出，否则空中复核完再派人，少占人力。
 // near：该步骤只在目标 260 m 内有空闲的该类智能体时才派（四足机器人太慢，远了赶不上，直接跳过）。
+// spots：事件会落在哪类设施旁（垃圾站、充电棚、配电房、装卸区、大门、围界、排水口、路灯），
+// 没有对应落点时才退回到沿环线随机取点。
 export const INCIDENT_TYPES = {
   obstacle: {
     name: '占道障碍',
+    spots: ['gate', 'loading'],
     level: 1,
     weight: 3,
     parallel: false,
@@ -54,6 +67,7 @@ export const INCIDENT_TYPES = {
   },
   pond: {
     name: '路面积水',
+    spots: ['drain'],
     level: 1,
     weight: 0,
     rain: 5,
@@ -62,6 +76,7 @@ export const INCIDENT_TYPES = {
   },
   intruder: {
     name: '异常闯入',
+    spots: ['fence'],
     level: 2,
     weight: 2,
     parallel: true,
@@ -69,6 +84,7 @@ export const INCIDENT_TYPES = {
   },
   smoke: {
     name: '烟雾告警',
+    spots: ['garbage', 'ebike', 'substation'],
     level: 3,
     weight: 1,
     parallel: true,
@@ -76,6 +92,7 @@ export const INCIDENT_TYPES = {
   },
   lamp: {
     name: '路灯故障',
+    spots: ['lamp'],
     level: 0,
     weight: 0,
     night: 4,

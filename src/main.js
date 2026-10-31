@@ -14,6 +14,7 @@ import { PatrolSim } from './patrol/sim.js';
 import { PatrolView } from './patrol/view.js';
 import { PatrolUi } from './patrol/ui.js';
 import { makeRoute } from './patrol/route.js';
+import { clearEcoLamps, clearEcoTrees, lampSpots } from './ecopark/layout.js';
 import { planPath } from './tour/planner.js';
 import { CameraRig, WALK_EYE } from './ui/cameraRig.js';
 import { makeWalkProbe } from './ui/walkCollider.js';
@@ -746,7 +747,12 @@ async function boot() {
   // 树木、路灯与灯光投影随后到达
   D.vegReady.then(() => {
     const tv = performance.now();
+    if (D.ecoPark) {
+      D.ecoTreesRemoved = clearEcoTrees(D, D.ecoPark);
+      D.ecoLampsRemoved = clearEcoLamps(D, D.ecoPark);
+    }
     world.addVegetation(D);
+    if (patrol && D.ecoPark) patrol.sim.setSpots('lamp', lampSpots(D, D.ecoPark));
     console.info(`vegetation added in ${Math.round(performance.now() - tv)} ms`);
     // 街景机位要避开树冠：树木数据到齐后重新定位一次
     const sc = SCENES.find((q) => q.id === current);
@@ -758,7 +764,7 @@ function setupPatrol() {
   const o = D.meta.origin;
   const project = (lon, lat) => ({ x: (lon - o.lon) * o.kx, z: -(lat - o.lat) * o.kz });
   const planRoad = (a, b) => makeRoute(planPath({ roads: D.roads, points: [a, b] }).points);
-  const sim = new PatrolSim({ project, planRoad });
+  const sim = new PatrolSim({ project, planRoad, spots: D.ecoPark?.spots });
   const view = new PatrolView(sim, { groundY: (x, z) => D.geo.height(x, z), project });
   scene.add(view.group);
   const ui = new PatrolUi({
