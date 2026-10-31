@@ -24,9 +24,11 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
 export class PatrolSim {
   // project: (lon, lat) → {x, z}；planRoad: (a, b) → 路线 {points, cum, length}
-  constructor({ project, planRoad, seed = 7, sectors = SECTORS, defs = AGENT_DEFS }) {
+  constructor({ project, planRoad, seed = 7, sectors = SECTORS, defs = AGENT_DEFS, spots = {} }) {
     this.sectors = sectors.map((s) => ({ ...s, ...project(s.lon, s.lat) }));
     this.planRoad = planRoad;
+    // 事件落点：{ 类别: [{ x, z, label, sector }] }，类别与 INCIDENT_TYPES 里的 spots 对应
+    this.spots = { ...spots };
     this.rand = mulberry32(seed);
     this.groundLoop = buildLoop(this.sectors, (a, b) => planRoad(a, b));
     this.airLoop = buildLoop(this.sectors, (a, b) => straightRoute(a, b));
@@ -103,22 +105,31 @@ export class PatrolSim {
     if (!type) return null;
     let sector;
     let pos;
+    let spot = null;
     if (at && typeof at === 'object' && at.ahead) {
       const a = this.agent(at.ahead);
       if (!a?.patrol) return null;
       const p = loopPoint(this._loopOf(a), a.loopS + a.dir * (at.meters ?? 60));
-      pos = { x: p.x, z: p.z };
-      sector = this._nearestSector(pos);
+      // 前方 80 m 内有贴合这类事件的设施就落在设施旁，否则落在路上
+      spot = this._pickSpot(type, null, p, 80);
+      pos = spot ? { x: spot.x, z: spot.z } : { x: p.x, z: p.z };
+      sector = (spot && this.sector(spot.sector)) || this._nearestSector(pos);
     } else if (at && typeof at === 'object' && Number.isFinite(at.x)) {
       pos = { x: at.x, z: at.z };
       sector = this._nearestSector(pos);
     } else {
-      sector = (at && this.sector(at)) || this.sectors[Math.floor(this.rand() * this.sectors.length)];
-      const loop = this.groundLoop;
-      const idx = this.sectors.indexOf(sector);
-      // 落在该分区点位之后 20–80 m；分区间隔最短约 170 m，不会越到下一个分区
-      const p = loopPoint(loop, (loop.offsets[idx] || 0) + 20 + this.rand() * 60);
-      pos = { x: p.x, z: p.z };
+      spot = this._pickSpot(type, typeof at === 'string' ? at : null);
+      if (spot) {
+        sector = this.sector(spot.sector) || this._nearestSector(spot);
+        pos = { x: spot.x, z: spot.z };
+      } else {
+        sector = (at && this.sector(at)) || this.sectors[Math.floor(this.rand() * this.sectors.length)];
+        const loop = this.groundLoop;
+        const idx = this.sectors.indexOf(sector);
+        // 落在该分区点位之后 20–80 m；分区间隔最短约 170 m，不会越到下一个分区
+        const p = loopPoint(loop, (loop.offsets[idx] || 0) + 20 + this.rand() * 60);
+        pos = { x: p.x, z: p.z };
+      }
     }
     const inc = {
       id: `E${String(this.nextId++).padStart(3, '0')}`,
@@ -127,6 +138,7 @@ export class PatrolSim {
       level: type.level,
       sector: sector.id,
       sectorName: sector.name,
+      place: spot ? spot.label : null,
       x: pos.x,
       z: pos.z,
       state: 'open',
@@ -138,8 +150,28 @@ export class PatrolSim {
       steps: type.needs.map((n) => ({ ...n, state: 'pending', agentId: null, eta: 0 })),
     };
     this.incidents.push(inc);
-    this.emit(`${sector.name} 出现${type.name}（尚未被发现）`, 0, inc, 'spawn');
+    this.emit(`${sector.name}${spot ? ` ${spot.label}附近` : ''} 出现${type.name}（尚未被发现）`, 0, inc, 'spawn');
     return inc;
+  }
+
+  setSpots(kind, list) {
+    this.spots[kind] = list;
+  }
+
+  // 按事件类型挑一个贴合现场的落点。sectorId 限定分区；near + radius 限定在某点附近并取最近的。
+  // 没有可用落点时返回 null，且不消耗随机数，所以没有落点数据时事件序列和以前完全一致。
+  _pickSpot(type, sectorId = null, near = null, radius = 0) {
+    const pool = [];
+    for (const kind of type.spots || []) {
+      for (const s of this.spots[kind] || []) {
+        if (sectorId && s.sector !== sectorId) continue;
+        if (near && dist(s, near) > radius) continue;
+        pool.push(s);
+      }
+    }
+    if (!pool.length) return null;
+    if (near) return pool.reduce((best, s) => (dist(s, near) < dist(best, near) ? s : best));
+    return pool[Math.floor(this.rand() * pool.length)];
   }
 
   _nearestSector(p) {

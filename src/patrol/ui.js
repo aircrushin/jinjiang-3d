@@ -265,7 +265,7 @@ export class PatrolUi {
     const steps = inc.steps.map((s) => `<span class="step ${s.state}" title="${esc(s.act)}">${esc(s.act)} · ${STEP_TEXT[s.state]}${s.agentId ? ` · ${esc(this.sim.agent(s.agentId).name.replace(/ 0?/, ' '))}` : ''}</span>`).join('');
     return `<div class="pt-item lv${inc.level}${resolved ? ' done' : ''}">
       <button type="button" class="pt-hit" data-focus="${inc.id}" data-kind="incident">
-        <b>${esc(inc.id)} ${esc(inc.name)}</b><em>${esc(LEVEL_NAME[inc.level])}</em><small>${esc(inc.sectorName)} · ${state}${inc.tDetect != null ? ` · ${clock(inc.tDetect)} 发现` : ''}</small>
+        <b>${esc(inc.id)} ${esc(inc.name)}</b><em>${esc(LEVEL_NAME[inc.level])}</em><small>${esc(inc.sectorName)}${inc.place ? ` · ${esc(inc.place)}` : ''} · ${state}${inc.tDetect != null ? ` · ${clock(inc.tDetect)} 发现` : ''}</small>
       </button>
       <div class="steps">${steps}</div>
     </div>`;

@@ -18,6 +18,9 @@ import { buildTraffic, buildWalkers } from './traffic.js';
 import { RC } from './data.js';
 import { classifyDetails,emitRoutedParts } from './detail-spatial.js';
 import { createDetailLayer } from './detail-layer.js';
+import { applyEcoParkStyle } from '../ecopark/style.js';
+import { buildEcoPark } from '../ecopark/layout.js';
+import { emitEcoPark } from '../ecopark/emit.js';
 import { RNG, hash32, lin } from '../core/rng.js';
 import { BLD, TREE_REC as TR } from './schema.js';
 
@@ -166,6 +169,9 @@ export class World {
 
     step('真实建筑轮廓');
     await nextFrame();
+    // 白鹭湾科技生态园的建筑外观要在建筑参数纹理生成之前覆盖
+    const isChengdu = D.meta.cityId === 'chengdu-jinjiang';
+    if (isChengdu) applyEcoParkStyle(D);
     const fp = buildFootprints(D);
     this.mats.facadeMerged = M.makeFacadeMaterial({ merged: true, btex: fp.btex });
     for (const [i,g] of fp.geos.entries()) {
@@ -192,6 +198,10 @@ export class World {
     for(const parts of fallbackParts.values()){
       P.pools.push(...parts.pools);P.qfront.push(...parts.qfront);
       P.stats.qilou+=parts.stats.qilou;P.stats.lingnan+=parts.stats.lingnan;
+    }
+    if (isChengdu) {
+      D.ecoPark = buildEcoPark(D);
+      emitEcoPark(P, D.ecoPark, (x, z) => geo.height(x, z));
     }
     for (const lm of D.landmarks) {
       P.y0 = lm.y || 0;
