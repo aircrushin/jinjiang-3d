@@ -25,6 +25,7 @@ export class PatrolUi {
     this.logCount = 0;
     this.lastRender = -1;
     this.tags = new Map();
+    this.areaTags = [];
     this.body = document.getElementById('patrol-body');
     this.tagsEl = document.getElementById('patrol-tags');
     this._v = new THREE.Vector3();
@@ -151,6 +152,13 @@ export class PatrolUi {
   renderStatic() {
     this.tagsEl.innerHTML = '';
     this.tagsEl.hidden = true;
+    for (const area of this.view.areas || []) {
+      const el = document.createElement('div');
+      el.className = 'pt-area';
+      el.textContent = area.name;
+      this.tagsEl.appendChild(el);
+      this.areaTags.push({ el, x: area.x, z: area.z });
+    }
     for (const a of this.sim.agents) {
       const el = document.createElement('button');
       el.type = 'button';
@@ -180,6 +188,14 @@ export class PatrolUi {
 
   updateTags(camera, w, h) {
     if (!this.active) return;
+    for (const t of this.areaTags) {
+      const y = this.view.groundY(t.x, t.z) + 4;
+      const dist = Math.hypot(camera.position.x - t.x, camera.position.y - y, camera.position.z - t.z);
+      this._v.set(t.x, y, t.z).project(camera);
+      const visible = this._v.z < 1 && Math.abs(this._v.x) < 1.1 && Math.abs(this._v.y) < 1.1 && dist < 1400;
+      t.el.style.opacity = visible ? '1' : '0';
+      if (visible) t.el.style.transform = `translate(${((this._v.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-this._v.y * 0.5 + 0.5) * h).toFixed(1)}px) translate(-50%, -50%)`;
+    }
     for (const a of this.sim.agents) {
       const tag = this.tags.get(a.id);
       const lift = a.role === 'air' ? a.curAlt + 10 : 12;
