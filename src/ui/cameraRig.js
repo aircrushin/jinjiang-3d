@@ -1,4 +1,4 @@
-// 镜头：方向键移动地图，左键旋转、右键平移、滚轮缩放，外加预设视角飞行、电影漫游和沿路线行走。
+// 镜头：方向键移动地图，左键旋转、右键平移、滚轮缩放，外加预设视角飞行、电影漫游、沿路线行走和第一人称游览。
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -7,6 +7,10 @@ const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 // 与 OrbitControls 的方向键一致：上键朝画面上方移动，左右键横向移动。
 const ARROWS = { ArrowUp: [0, 1], ArrowDown: [0, -1], ArrowLeft: [1, 0], ArrowRight: [-1, 0] };
+const WALK_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD']);
+export const WALK_EYE = 1.65;
+const WALK_SPEED = 4.6;
+const WALK_SPRINT = 12;
 
 export class CameraRig {
   constructor(camera, dom) {
@@ -29,7 +33,33 @@ export class CameraRig {
     this._onKeyUp = (e) => this._key(e, false);
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
-    window.addEventListener('blur', () => this._keys.clear());
+    window.addEventListener('blur', () => {
+      this._keys.clear();
+      this._lookDrag = false;
+    });
+    this.walking = false;
+    this.walkProbe = null;
+    this._yaw = 0;
+    this._pitch = -0.08;
+    this._lookDrag = false;
+    this._fwd = new THREE.Vector3();
+    this._onPointerDown = (e) => {
+      if (!this.walking || e.button !== 0) return;
+      this._lookDrag = true;
+      dom.setPointerCapture?.(e.pointerId);
+    };
+    this._onPointerMove = (e) => {
+      if (!this._lookDrag) return;
+      this._yaw += e.movementX * 0.0022;
+      this._pitch = Math.max(-1.02, Math.min(0.75, this._pitch - e.movementY * 0.0016));
+    };
+    this._onPointerUp = () => {
+      this._lookDrag = false;
+    };
+    dom.addEventListener('pointerdown', this._onPointerDown);
+    window.addEventListener('pointermove', this._onPointerMove);
+    window.addEventListener('pointerup', this._onPointerUp);
+    window.addEventListener('pointercancel', this._onPointerUp);
     c.addEventListener('start', () => {
       if (this.tween || this.cine || this.path || c.autoRotate) this.onInterrupt?.();
       this.tween = null;
@@ -45,6 +75,7 @@ export class CameraRig {
     this._r = new THREE.Vector3();
   }
   flyTo(pos, target, dur = 1.9, after = null) {
+    this.releaseWalk();
     this.cine = null;
     this._dropPath();
     this.controls.autoRotate = false;
@@ -57,6 +88,7 @@ export class CameraRig {
     });
   }
   cinematic(points, looks, duration) {
+    this.releaseWalk();
     this.tween = null;
     this._dropPath();
     this.controls.autoRotate = false;
@@ -68,6 +100,7 @@ export class CameraRig {
       opts.after?.();
       return;
     }
+    this.releaseWalk();
     this.tween = null;
     this.cine = null;
     this.controls.autoRotate = false;
@@ -137,21 +170,140 @@ export class CameraRig {
   get busy() {
     return !!(this.tween || this.cine || this.path);
   }
+  // 落到注视点附近的人眼高度。找不到落脚点时保持当前视角。
+  setWalk(on) {
+    if (!!on === this.walking) return this.walking;
+    if (!on) {
+      this.releaseWalk();
+      return false;
+    }
+    const spot = this._findStand(this.controls.target.x, this.controls.target.z) || this._findStand(this.camera.position.x, this.camera.position.z);
+    if (!spot) return false;
+    const dx = this.controls.target.x - this.camera.position.x;
+    const dz = this.controls.target.z - this.camera.position.z;
+    this.tween = null;
+    this.cine = null;
+    this._dropPath();
+    this.controls.autoRotate = false;
+    this.onInterrupt?.();
+    this._yaw = Math.hypot(dx, dz) > 1 ? Math.atan2(dx, dz) : 0;
+    this._pitch = -0.08;
+    this.camera.position.set(spot.x, spot.y + WALK_EYE, spot.z);
+    this.walking = true;
+    this.controls.enabled = false;
+    this._clearOrbitDelta();
+    this._aim();
+    this.onWalkChange?.(true);
+    return true;
+  }
+  releaseWalk() {
+    if (!this.walking) return;
+    this.walking = false;
+    this._lookDrag = false;
+    this.controls.enabled = true;
+    this._clearOrbitDelta();
+    this._aim();
+    this.controls.update();
+    this.onWalkChange?.(false);
+  }
+  _clearOrbitDelta() {
+    this.controls._sphericalDelta?.set(0, 0, 0);
+    this.controls._panOffset?.set(0, 0, 0);
+  }
+  _findStand(x, z) {
+    const probe = this.walkProbe;
+    if (!probe) return null;
+    const direct = probe(x, z);
+    if (direct != null) return { x, z, y: direct };
+    for (let k = 1; k <= 1100; k++) {
+      const a = k * 2.399;
+      const r = Math.sqrt(k) * 4.2;
+      const nx = x + Math.cos(a) * r;
+      const nz = z + Math.sin(a) * r;
+      const y = probe(nx, nz);
+      if (y != null) return { x: nx, z: nz, y };
+    }
+    return null;
+  }
+  _aim() {
+    const cp = Math.cos(this._pitch);
+    this._fwd.set(Math.sin(this._yaw) * cp, Math.sin(this._pitch), Math.cos(this._yaw) * cp);
+    this.controls.target.copy(this.camera.position).addScaledVector(this._fwd, 8);
+    this.camera.lookAt(this.controls.target);
+  }
+  _stand(x, z) {
+    const y = this.walkProbe?.(x, z);
+    if (y == null) return false;
+    this.camera.position.x = x;
+    this.camera.position.z = z;
+    this.camera.position.y = y + WALK_EYE;
+    return true;
+  }
+  _step(sx, sz) {
+    const p = this.camera.position;
+    if (this._stand(p.x + sx, p.z + sz)) return;
+    const z = p.z;
+    this._stand(p.x + sx, z);
+    this._stand(p.x, z + sz);
+  }
+  _walk(dt) {
+    const turn = (this._keys.has('ArrowRight') ? 1 : 0) - (this._keys.has('ArrowLeft') ? 1 : 0);
+    this._yaw += turn * 1.7 * dt;
+    const sin = Math.sin(this._yaw);
+    const cos = Math.cos(this._yaw);
+    let x = 0;
+    let z = 0;
+    if (this._keys.has('ArrowUp') || this._keys.has('KeyW')) {
+      x += sin;
+      z += cos;
+    }
+    if (this._keys.has('ArrowDown') || this._keys.has('KeyS')) {
+      x -= sin;
+      z -= cos;
+    }
+    if (this._keys.has('KeyD')) {
+      x += cos;
+      z -= sin;
+    }
+    if (this._keys.has('KeyA')) {
+      x -= cos;
+      z += sin;
+    }
+    const len = Math.hypot(x, z);
+    if (len > 0) {
+      const sprint = this._keys.has('ShiftLeft') || this._keys.has('ShiftRight');
+      const dist = (sprint ? WALK_SPRINT : WALK_SPEED) * dt;
+      const steps = Math.max(1, Math.ceil(dist / 0.3));
+      const sx = (x / len) * (dist / steps);
+      const sz = (z / len) * (dist / steps);
+      for (let i = 0; i < steps; i++) this._step(sx, sz);
+    }
+    const y = this.walkProbe?.(this.camera.position.x, this.camera.position.z);
+    if (y != null) this.camera.position.y = y + WALK_EYE;
+    this._aim();
+  }
   _key(e, down) {
-    if (!ARROWS[e.code]) return;
     const el = e.target;
     if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.isContentEditable)) return;
-    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+      if (down) this._keys.add(e.code);
+      else this._keys.delete(e.code);
+      return;
+    }
+    if (!WALK_KEYS.has(e.code)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!this.walking && (e.shiftKey || !ARROWS[e.code])) return;
     e.preventDefault();
     if (down) this._keys.add(e.code);
     else this._keys.delete(e.code);
   }
   _moveKeys(dt) {
-    if (!this._keys.size) return;
+    if (!this._keys.size || this.walking) return;
     let x = 0;
     let y = 0;
     for (const code of this._keys) {
       const d = ARROWS[code];
+      if (!d) continue;
       x += d[0];
       y += d[1];
     }
@@ -169,6 +321,10 @@ export class CameraRig {
     c._pan((x / len) * px, (y / len) * px);
   }
   update(dt) {
+    if (this.walking) {
+      this._walk(dt);
+      return;
+    }
     this._moveKeys(dt);
     const c = this.controls;
     if (this.tween) {

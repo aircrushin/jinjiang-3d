@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { INTERESTS, PLACES } from '../src/tour/catalog.js';
+import { INTERESTS, PLACES, ROUTES } from '../src/tour/catalog.js';
 import { clearRouteGraphCache, formatMeters, formatMinutes, planItinerary, resample } from '../src/tour/planner.js';
 
 const project = (lon, lat) => ({ x: lon, z: lat });
@@ -119,4 +119,40 @@ test('折线按步长取样并且保留终点', () => {
   const pts = resample([{ x: 0, y: 0, z: 0 }, { x: 100, y: 0, z: 0 }], 40);
   assert.ok(Math.hypot(pts[1].x - 40, pts[1].z) < 0.01);
   assert.equal(pts.at(-1).x, 100);
+});
+
+test('主题线的站点都在目录里，且各自有时段和钟点', () => {
+  const ids = new Set(PLACES.map((p) => p.id));
+  const seen = new Set();
+  assert.ok(ROUTES.length >= 4);
+  for (const r of ROUTES) {
+    assert.equal(seen.has(r.id), false);
+    seen.add(r.id);
+    assert.ok(r.stops.length >= 3);
+    assert.ok(r.stops.every((id) => ids.has(id)), `${r.id} 有目录里没有的站`);
+    assert.equal(new Set(r.stops).size, r.stops.length);
+    assert.ok(r.bestTime && r.tips && r.transport);
+    assert.ok(r.hour >= 0 && r.hour < 24);
+  }
+});
+
+test('固定主题线按给定顺序走，不受站数和兴趣限制', () => {
+  clearRouteGraphCache();
+  const places = [0, 100, 200, 300, 400, 500, 600].map((x, i) => place(`p${i}`, x, 0, ['family'], 15));
+  const roads = [{ pts: [[0, 0, 0], [600, 0, 0]], ys: [0, 0], cls: 2, ped: true, w: 8 }];
+  const order = ['p3', 'p1', 'p5', 'p0', 'p6', 'p2'];
+  const route = planItinerary({ places, placeIds: order, roads, project });
+  assert.ok(route);
+  assert.deepEqual(route.stops.map((s) => s.id), order);
+  assert.equal(route.fixed, true);
+  assert.ok(route.totalMin > 0);
+});
+
+test('固定主题线里不存在的 id 会被跳过，全不存在则不排', () => {
+  clearRouteGraphCache();
+  const places = [place('a', 0, 0, ['food']), place('b', 100, 0, ['food'])];
+  const roads = [{ pts: [[0, 0, 0], [100, 0, 0]], ys: [0, 0], cls: 2, ped: true, w: 8 }];
+  const route = planItinerary({ places, placeIds: ['a', 'nope', 'b'], roads, project });
+  assert.deepEqual(route.stops.map((s) => s.id), ['a', 'b']);
+  assert.equal(planItinerary({ places, placeIds: ['x', 'y'], roads, project }), null);
 });

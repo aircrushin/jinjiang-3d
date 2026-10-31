@@ -20,3 +20,4 @@ __pycache__/
 *.py[cod]
 
 data/source/*.osm.pbf
+/output

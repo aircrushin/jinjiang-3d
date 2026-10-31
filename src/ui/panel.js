@@ -44,6 +44,7 @@ export class Panel {
     ).join('');
     this.btns = [...body.querySelectorAll('.scene')];
     this.btns.forEach((b) => (b.onclick = () => opts.onScene(b.dataset.id)));
+    document.getElementById('btn-walk').onclick = () => opts.onAction('walk');
     document.getElementById('btn-shot').onclick = () => opts.onAction('shot');
     document.getElementById('btn-hide').onclick = () => opts.onAction('hide');
     document.getElementById('btn-trees').onclick = () => opts.onAction('trees');

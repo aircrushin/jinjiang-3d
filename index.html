@@ -56,6 +56,7 @@
         <div class="panel-body" id="route-body" role="tabpanel" hidden></div>
         <div class="panel-foot">
           <div class="foot-actions">
+            <button class="act" id="btn-walk" type="button" aria-pressed="false" title="方向键进退与转向，拖动环顾，Shift 加速，V 键切换">第一人称游览</button>
             <button class="act" id="btn-shot" type="button"><svg viewBox="0 0 24 24"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3" /><circle cx="12" cy="12" r="3" /></svg>导出截图</button>
             <button class="act" id="btn-hide" type="button"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>隐藏界面</button>
             <button class="act" id="btn-trees" type="button" aria-pressed="false" title="仅供查看被树冠遮挡的模型；切换场景后恢复" hidden>暂隐树木</button>
@@ -72,7 +73,7 @@
       </div>
 
       <div id="hint">
-        <span><b>方向键</b> 移动</span><span><b>左键</b> 旋转</span><span><b>右键</b> 平移</span><span><b>滚轮</b> 缩放</span><span><b>双击</b> 聚焦</span><span><b>1–0 - =</b> 切换场景</span><span><b>R</b> 行程</span><span><b>H</b> 隐藏界面</span>
+        <span class="orbit"><b>方向键</b> 移动</span><span class="orbit"><b>左键</b> 旋转</span><span class="orbit"><b>右键</b> 平移</span><span class="orbit"><b>滚轮</b> 缩放</span><span class="orbit"><b>双击</b> 聚焦</span><span class="orbit"><b>1–0 - =</b> 切换场景</span><span class="orbit"><b>R</b> 行程</span><span class="orbit"><b>H</b> 隐藏界面</span><span class="orbit"><b>V</b> 第一人称</span><span class="walk"><b>↑↓</b> 进退</span><span class="walk"><b>←→</b> 转向</span><span class="walk"><b>A D</b> 横移</span><span class="walk"><b>拖动</b> 环顾</span><span class="walk"><b>Shift</b> 加速</span><span class="walk"><b>V</b> 退出</span>
       </div>
       <button class="icon-btn" id="btn-show" type="button" title="显示界面" aria-label="显示界面"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg></button>
       <div id="status" class="hidden"><span class="spin"></span><span id="status-text">生成中…</span></div>

@@ -67,6 +67,8 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .scene .txt i { font-style: normal; font-size: 10px; font-family: var(--mono); color: var(--dim); }
 .panel-foot { padding: 12px; border-top: 1px solid var(--border); transition: opacity 0.2s; }
 .foot-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#btn-walk { grid-column: 1 / -1; }
+#btn-walk[aria-pressed='true'] { background: #e4b15a; border-color: #e4b15a; color: #2a2116; }
 #btn-trees { grid-column: 1 / -1; }
 #btn-trees[hidden], #tree-inspection-note[hidden] { display: none; }
 #tree-inspection-note { position: absolute; z-index: 7; bottom: 64px; left: 50%; transform: translateX(-50%); padding: 8px 12px; color: var(--muted); background: var(--panel-solid); border: 1px solid var(--border); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); font-size: 12px; font-family: var(--mono); pointer-events: none; }
@@ -97,6 +99,10 @@ body.no-labels #labels { display: none; }
 /* ---------- 提示与状态 ---------- */
 #hint { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; gap: 14px; padding: 8px 14px; background: var(--panel); border: 1px solid var(--border); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: var(--shadow); font-size: 11px; color: var(--dim); white-space: nowrap; margin-left: -190px; font-family: var(--mono); }
 #hint b { color: var(--muted); font-weight: 500; }
+#hint .walk { display: none; }
+body.walk-mode #hint .orbit { display: none; }
+body.walk-mode #hint .walk { display: flex; }
+body.walk-mode #viewport, body.walk-mode #viewport:active { cursor: crosshair; }
 #status { position: absolute; left: 50%; top: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 9px; padding: 8px 12px; background: var(--panel-solid); border: 1px solid var(--border-2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); font-size: 12px; color: var(--muted); font-family: var(--mono); transition: opacity 0.2s; margin-left: -190px; }
 #status.hidden, #toast.hidden { opacity: 0; pointer-events: none; }
 .spin { width: 12px; height: 12px; border: 1px solid var(--border); border-top-color: var(--accent); animation: spin 0.7s linear infinite; flex: none; }
@@ -119,6 +125,14 @@ body.ui-hidden #panel, body.ui-hidden #minimap, body.ui-hidden #hint, body.ui-hi
 .route-lead { margin: 4px 4px 12px; font-size: 13px; line-height: 1.55; color: var(--muted); }
 .interest-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .interest { border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; line-height: 1; padding: 7px 10px; cursor: pointer; }
+.theme-list { display: grid; gap: 6px; margin-bottom: 4px; }
+.theme-card { display: grid; gap: 3px; text-align: left; border: 1px solid var(--border); background: transparent; color: var(--muted); padding: 9px 10px; cursor: pointer; font: inherit; }
+.theme-card:focus-visible { outline: 2px solid #e4b15a; outline-offset: 2px; }
+.theme-card.on { border-color: #e4b15a; background: rgba(228, 177, 90, 0.14); }
+.theme-name { font-size: 14px; color: #f6e7c8; }
+.theme-tag, .theme-meta { font-size: 12px; line-height: 1.45; }
+.theme-or { margin-top: 12px; margin-bottom: 6px; }
+.route-theme { margin: 10px 4px 2px; font-size: 14px; color: #f6e7c8; }
 .interest.on { color: #f6e7c8; border-color: #e4b15a; background: rgba(228, 177, 90, 0.14); }
 #route-go { width: 100%; margin-top: 12px; }
 #route-result { margin-top: 14px; }
@@ -162,7 +176,8 @@ body.ui-hidden #btn-show { opacity: 1; pointer-events: auto; }
   .scene .thumb { width: 46px; height: 40px; }
   .scene .thumb em { display: none; }
   .panel-foot { display: flex; align-items: center; gap: 8px; padding: 0 8px 8px; border-top: 0; }
-  .foot-actions { display: flex; flex: none; }
+  .foot-actions { display: flex; flex: none; flex-wrap: wrap; }
+  #btn-walk { flex: 1 0 100%; }
   .foot-actions .act { height: 28px; padding: 0 9px; font-size: 11px; }
   #btn-shot { display: none; }
   .attrib { margin: 0; flex: 1; text-align: right; font-size: 9px; }

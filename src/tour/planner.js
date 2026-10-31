@@ -33,10 +33,12 @@ export function formatMeters(m) {
   return `${(m / 1000).toFixed(1)} 公里`;
 }
 
-export function planItinerary({ places, interests, roads, project, start = DEFAULT_START, maxStops = MAX_STOPS, maxLeg = MAX_LEG }) {
+// placeIds 给定时是固定主题线：按这个顺序走，不再按兴趣挑点，也不限站数和单段长度。
+export function planItinerary({ places, interests, placeIds, roads, project, start = DEFAULT_START, maxStops = MAX_STOPS, maxLeg = MAX_LEG }) {
+  const fixed = Array.isArray(placeIds) && placeIds.length > 0;
   const want = [...(interests || [])];
-  if (!want.length || !places?.length || !project) return null;
-  const chosen = selectPlaces(places, want, project, start, maxStops, maxLeg);
+  if ((!fixed && !want.length) || !places?.length || !project) return null;
+  const chosen = fixed ? fixedPlaces(places, placeIds) : selectPlaces(places, want, project, start, maxStops, maxLeg);
   if (!chosen.length) return null;
   const graph = graphFor(roads || []);
   const located = [];
@@ -101,7 +103,7 @@ export function planItinerary({ places, interests, roads, project, start = DEFAU
       }
     }
     const at = points[best];
-    const matched = loc.place.interests.filter((id) => selected.has(id));
+    const matched = fixed ? loc.place.interests : loc.place.interests.filter((id) => selected.has(id));
     return {
       id: loc.place.id,
       name: loc.place.name,
@@ -135,6 +137,7 @@ export function planItinerary({ places, interests, roads, project, start = DEFAU
   if (!walkMeters && stops.length > 1) walkMeters = stops[stops.length - 1].dist;
   return {
     interests: want,
+    fixed,
     stops,
     points,
     cum,
@@ -179,6 +182,11 @@ function mapUrl(lon, lat) {
   const la = lat.toFixed(6);
   const lo = lon.toFixed(6);
   return `https://www.openstreetmap.org/?mlat=${la}&mlon=${lo}#map=18/${la}/${lo}`;
+}
+
+function fixedPlaces(places, ids) {
+  const byId = new Map(places.map((p) => [p.id, p]));
+  return ids.map((id) => byId.get(id)).filter(Boolean);
 }
 
 function selectPlaces(places, interests, project, start, maxStops, maxLeg) {

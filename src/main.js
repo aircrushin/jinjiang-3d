@@ -10,7 +10,8 @@ import { Rain } from './scene/rain.js';
 import { Panel } from './ui/panel.js';
 import { Hud } from './ui/hud.js';
 import { Itinerary } from './ui/itinerary.js';
-import { CameraRig } from './ui/cameraRig.js';
+import { CameraRig, WALK_EYE } from './ui/cameraRig.js';
+import { makeWalkProbe } from './ui/walkCollider.js';
 import { loadCity } from './world/data.js';
 import { World } from './world/city.js';
 import {isDetailTrial,TRIAL_SCENES} from './world/detail-trial.js';
@@ -80,9 +81,27 @@ const panel = new Panel({
     else if (a === 'hide') {
       document.body.classList.toggle('ui-hidden');
       if (document.body.classList.contains('ui-hidden') && !matchMedia('(pointer: coarse)').matches) hud.toast('按 H 键或右下角按钮恢复界面');
-    }
+    } else if (a === 'walk') toggleWalk();
   },
 });
+function syncWalkButton() {
+  const btn = document.getElementById('btn-walk');
+  const on = rig.walking;
+  btn.setAttribute('aria-pressed', String(on));
+  btn.textContent = on ? '退出第一人称' : '第一人称游览';
+  document.body.classList.toggle('walk-mode', on);
+}
+rig.onWalkChange = syncWalkButton;
+function toggleWalk() {
+  if (!D) return;
+  if (rig.walking) {
+    rig.setWalk(false);
+    hud.toast('已回到自由视角');
+    return;
+  }
+  if (rig.setWalk(true)) hud.toast('第一人称：↑↓ 进退，←→ 转向，拖动环顾，Shift 加速');
+  else hud.toast('附近没有可以站立的地面');
+}
 rig.onInterrupt = () => {
   setScene(null);
   itinerary?.onUserInterrupt();
@@ -151,6 +170,7 @@ function viewClear(x, z, dx, dz) {
   return true;
 }
 function applyScene(id, instant = false) {
+  rig.releaseWalk();
   const s = SCENES.find((q) => q.id === id);
   if (!s || !D) return;
   params = { ...s.atmos };
@@ -303,6 +323,7 @@ function applyScene(id, instant = false) {
 
 // 双击聚焦地面点
 canvas.addEventListener('dblclick', (e) => {
+  if (rig.walking) return;
   const r = canvas.getBoundingClientRect();
   const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   const ray = new THREE.Raycaster();
@@ -320,7 +341,10 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   const si = SCENE_KEYS.indexOf(k);
   if (k === 'h') document.body.classList.toggle('ui-hidden');
-  else if (k === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+  else if (k === 'v' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    toggleWalk();
+  } else if (k === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
     e.preventDefault();
     itinerary?.showTab('route');
   } else if (SCENES[si]) applyScene(SCENES[si].id);
@@ -534,6 +558,7 @@ function applyHash(instant) {
   const interests = readInterests(q);
   const c = (q.get('cam') || '').split(',').map(Number);
   if (c.length === 6 && !c.some(Number.isNaN)) {
+    rig.releaseWalk();
     const base = SCENES[0].atmos;
     const t = +q.get('t');
     params = { ...base, timeOfDay: t >= 0 && t < 24 ? t : base.timeOfDay, weather: WEATHERS.includes(q.get('w')) ? q.get('w') : base.weather };
@@ -573,7 +598,7 @@ const touch = () => {
 };
 for (const ev of ['pointerdown', 'wheel', 'keydown', 'touchstart']) window.addEventListener(ev, touch, { passive: true, capture: true });
 function tour(now) {
-  if (reduceMotion.matches || probe || document.hidden || itinerary?.hasRoute || SCENES.some(s=>s.id===current&&s.group==='detail')) {
+  if (rig.walking || reduceMotion.matches || probe || document.hidden || itinerary?.hasRoute || SCENES.some(s=>s.id===current&&s.group==='detail')) {
     lastInput = now;
     return;
   }
@@ -606,7 +631,8 @@ function frame(now) {
   rig.update(dt);
   // 相机不钻进山体
   const gh = D.geo.height(camera.position.x, camera.position.z);
-  if (camera.position.y < gh + 2) camera.position.y = gh + 2;
+  const clearance = rig.walking ? WALK_EYE : 2;
+  if (camera.position.y < gh + clearance) camera.position.y = gh + clearance;
   world.tick(dt, camera);
   world.updateLod(camera);
   // 近裁剪面随高度自适应，兼顾街景与全城远景的深度精度
@@ -681,6 +707,7 @@ async function boot() {
     ts = now;
     loaderSub.textContent = `构建：${s}`;
   });
+  rig.walkProbe = makeWalkProbe(D);
   if(detailTrialEnabled){const {mountDetailTrial}=await import('./ui/detail-trial.js');mountDetailTrial(world,D,applyScene);}
   steps.push(`${sn} ${Math.round(performance.now() - ts)}`);
   hud.setLabels(world.labels);
@@ -723,6 +750,7 @@ itinerary = new Itinerary({
   },
   reduceMotion: () => reduceMotion.matches,
   onView: (pos, tgt, dur) => {
+    rig.releaseWalk();
     if (!dur) {
       rig.path = null;
       rig.tween = null;

@@ -1,7 +1,7 @@
 // 兴趣行程：选类型、沿街道生成路线、看每站预览，出发前可以用人眼高度走一遍。
 
 import * as THREE from 'three';
-import { INTERESTS, PLACES } from '../tour/catalog.js';
+import { INTERESTS, PLACES, ROUTES } from '../tour/catalog.js';
 import { formatMeters, formatMinutes, planItinerary, pointAt } from '../tour/planner.js';
 import { RouteView } from '../tour/routeView.js';
 
@@ -17,6 +17,7 @@ export class Itinerary {
     this.body = document.getElementById('route-body');
     this.pinsEl = document.getElementById('route-pins');
     this.selected = new Set();
+    this.theme = null;
     this.route = null;
     this.samples = null;
     this.mode = 'plan';
@@ -27,11 +28,19 @@ export class Itinerary {
     this.pinList = [];
     this._v = new THREE.Vector3();
     this.body.innerHTML = `
-      <p class="route-lead">选出想逛的类型，沿街道排一条能走的路线。出发前可以先用人眼高度看一遍。</p>
+      <p class="route-lead">选一条现成的主题线，或者勾选想逛的类型，沿街道排一条能走的路线。出发前可以先用人眼高度看一遍。</p>
+      <div class="theme-list" id="route-themes"></div>
+      <p class="route-lead theme-or">或者按兴趣自己排</p>
       <div class="interest-row" id="route-interests"></div>
       <button type="button" class="act primary" id="route-go" disabled>生成路线</button>
       <div id="route-result" hidden></div>
     `;
+    document.getElementById('route-themes').innerHTML = ROUTES.map((t) => `
+      <button type="button" class="theme-card" data-theme="${esc(t.id)}" aria-pressed="false">
+        <span class="theme-name">${esc(t.name)}</span>
+        <span class="theme-tag">${esc(t.tagline)}</span>
+        <span class="theme-meta">${t.stops.length} 站 · 最佳时段：${esc(t.bestTime)}</span>
+      </button>`).join('');
     const row = document.getElementById('route-interests');
     row.innerHTML = INTERESTS.map((item) => `<button type="button" class="interest" data-interest="${item.id}" aria-pressed="false">${item.name}</button>`).join('');
     this.body.addEventListener('click', (e) => this.onClick(e));
@@ -108,11 +117,46 @@ export class Itinerary {
     this.commit(route, { frame: true, announce: true, ...opts });
   }
 
+  async generateTheme(id) {
+    const theme = ROUTES.find((t) => t.id === id);
+    if (!theme || this.planning) return;
+    if (!this.opts.getCity()?.roads) {
+      this.opts.onToast('城市还在载入');
+      return;
+    }
+    this.selected.clear();
+    this.syncInterests();
+    this.theme = theme;
+    this.syncThemes();
+    this.planning = true;
+    this.syncGo();
+    this.opts.onStatus('正在沿街道排路线…');
+    await new Promise((resolve) => setTimeout(resolve, 32));
+    let route = null;
+    try {
+      route = this.planNow();
+    } catch (err) {
+      console.warn(err);
+    } finally {
+      this.planning = false;
+      this.opts.onStatus(null);
+      this.syncGo();
+    }
+    if (!route) {
+      this.theme = null;
+      this.syncThemes();
+      this.opts.onToast('这条主题线暂时排不出来');
+      return;
+    }
+    this.commit(route, { frame: true, announce: true });
+  }
+
   planNow() {
     const city = this.opts.getCity();
     return planItinerary({
       places: PLACES,
       interests: [...this.selected],
+      placeIds: this.theme?.stops,
       roads: city.roads,
       project: (lon, lat) => this.opts.project(lon, lat),
     });
@@ -143,7 +187,10 @@ export class Itinerary {
     console.info(`行程 ${route.stops.length} 站 / ${Math.round(route.walkMeters)} m / 路网 ${route.stats.nodes} 点 / ${Math.round(route.stats.graphMs)} ms${route.stats.directLegs ? ` / 直线 ${route.stats.directLegs}` : ''}`);
     if (!keepScene) this.opts.onLeaveScene();
     let extra = '';
-    if (!keepScene && this.selected.has('night') && this.opts.getTime() < 19) {
+    if (!keepScene && this.theme?.hour != null) {
+      this.opts.setTime(this.theme.hour);
+      extra = ` · 已调到${this.theme.bestTime}的光线`;
+    } else if (!keepScene && this.selected.has('night') && this.opts.getTime() < 19) {
       this.opts.setTime(19.8);
       extra = ' · 已调到傍晚';
     }
@@ -155,6 +202,8 @@ export class Itinerary {
   clear() {
     this.token += 1;
     this.route = null;
+    this.theme = null;
+    this.syncThemes();
     this.samples = null;
     this.mode = 'plan';
     this.activeId = null;
@@ -196,8 +245,17 @@ export class Itinerary {
   }
 
   onClick(e) {
+    const themeBtn = e.target.closest('.theme-card');
+    if (themeBtn) {
+      this.generateTheme(themeBtn.dataset.theme);
+      return;
+    }
     const interest = e.target.closest('.interest');
     if (interest) {
+      if (this.theme) {
+        this.theme = null;
+        this.syncThemes();
+      }
       const id = interest.dataset.interest;
       if (this.selected.has(id)) this.selected.delete(id);
       else this.selected.add(id);
@@ -422,6 +480,14 @@ export class Itinerary {
     }
   }
 
+  syncThemes() {
+    for (const btn of this.body.querySelectorAll('.theme-card')) {
+      const on = this.theme?.id === btn.dataset.theme;
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', String(on));
+    }
+  }
+
   syncGo() {
     const btn = document.getElementById('route-go');
     if (!btn) return;
@@ -456,7 +522,10 @@ export class Itinerary {
     const note = route.stats.directLegs ? '有一段街道没连上，暂时按直线补上。' : '按每小时 4.5 公里估算，含在每一站停留的时间。';
     const result = document.getElementById('route-result');
     result.hidden = false;
+    const theme = this.theme;
+    const head = theme ? `<p class="route-theme">${esc(theme.name)} · ${esc(theme.transport)}</p><p class="route-note">${esc(theme.tips)}</p>` : '';
     result.innerHTML = `
+      ${head}
       <p class="route-summary">${route.stops.length} 站 · 步行 ${formatMeters(route.walkMeters)} · 合计约 ${formatMinutes(route.totalMin)}</p>
       <p class="route-note">走路 ${formatMinutes(route.walkMin)}，停留 ${formatMinutes(route.dwellMin)}。${note}</p>
       <p class="route-live" id="route-live" hidden></p>

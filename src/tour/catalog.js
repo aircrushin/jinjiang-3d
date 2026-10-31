@@ -183,4 +183,49 @@ export const PLACES = [
   },
 ];
 
+// 固定主题线：stops 是 PLACES 的 id，顺序即走法。距离和时长由路网算出来，不手填。
+// hour 是进入线路时场景要切到的钟点（24 小时制），白天线不强制。
+export const ROUTES = [
+  {
+    id: 'theme-food',
+    name: '春熙食光线',
+    tagline: '从老路口走到江边，边走边吃',
+    stops: ['yanshikou', 'huaxing', 'chunxi', 'taikoo', 'wangping'],
+    bestTime: '中午到傍晚',
+    hour: 12.5,
+    transport: '全程步行',
+    tips: '11:30 前后出发，错开午高峰。',
+  },
+  {
+    id: 'theme-art',
+    name: '古寺老街文艺线',
+    tagline: '从旧街院落到古寺，再到酒坊遗址',
+    stops: ['shuyuan', 'daci', 'taikoo', 'shuijingfang'],
+    bestTime: '下午',
+    hour: 15,
+    transport: '全程步行',
+    tips: '水井坊品鉴需要另外预约。',
+  },
+  {
+    id: 'theme-night',
+    name: '锦江夜游线',
+    tagline: '商场灯光收进江边的夜色',
+    stops: ['ifs', 'lankwai', 'wangping', 'dongmen', 'jiuyan'],
+    bestTime: '夜晚',
+    hour: 19.8,
+    transport: '全程步行',
+    tips: '天黑后再出发，灯光和桥上夜景最完整。',
+  },
+  {
+    id: 'theme-family',
+    name: '江岸亲子慢走线',
+    tagline: '地势平，沿江慢慢走',
+    stops: ['hejiang', 'anshun', 'huoshui', 'donghu'],
+    bestTime: '白天',
+    hour: 10.5,
+    transport: '全程步行，东湖段可改乘公交',
+    tips: '带孩子可以只走前两站，在廊桥收尾。',
+  },
+];
+
 export const DEFAULT_START = { lon: 104.0817, lat: 30.6572 };
