@@ -18,6 +18,8 @@ export class Hud {
     this.statusText = document.getElementById('status-text');
     this.toastEl = document.getElementById('toast');
     this.labels = [];
+    this.route = null;
+    this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.v = new THREE.Vector3();
     this.mm.addEventListener('click', (e) => {
       if (!this.map) return;
@@ -228,6 +230,9 @@ export class Hud {
     }
     document.getElementById('mm-scale').textContent = `${(sx / 1000).toFixed(1)} × ${(sz / 1000).toFixed(1)} km`;
   }
+  setRoute(route) {
+    this.route = route;
+  }
   drawCamera(camera, target) {
     if (!this.map) return;
     const g = this.mmCtx;
@@ -237,6 +242,29 @@ export class Hud {
     const NH = this.mm.height;
     const tx = (x) => ((x - x0) / sx) * N;
     const tz = (z) => ((z - z0) / sz) * NH;
+    if (this.route?.points?.length > 1) {
+      g.save();
+      g.strokeStyle = '#e4b15a';
+      g.lineWidth = 2;
+      g.lineJoin = 'round';
+      g.lineCap = 'round';
+      if (this.reduceMotion.matches) g.setLineDash([]);
+      else {
+        g.setLineDash([5, 4]);
+        g.lineDashOffset = -(performance.now() / 45);
+      }
+      g.beginPath();
+      this.route.points.forEach((p, i) => (i ? g.lineTo(tx(p.x), tz(p.z)) : g.moveTo(tx(p.x), tz(p.z))));
+      g.stroke();
+      g.setLineDash([]);
+      for (const s of this.route.stops) {
+        g.fillStyle = s.id === this.route.activeId ? '#fff4dc' : '#e4b15a';
+        g.beginPath();
+        g.arc(tx(s.x), tz(s.z), 3.2, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.restore();
+    }
     const cx = tx(camera.position.x);
     const cz = tz(camera.position.z);
     const dir = new THREE.Vector3();

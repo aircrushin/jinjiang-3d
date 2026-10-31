@@ -34,20 +34,26 @@
     <div id="app">
       <canvas id="viewport" aria-label="成都锦江区城市三维视口"></canvas>
       <div id="labels" aria-hidden="true"></div>
+      <div id="route-pins"></div>
 
       <div id="tree-inspection-note" hidden role="status">树木暂隐 · 仅供模型检查</div>
 
-      <aside id="panel" aria-label="预设场景">
+      <aside id="panel" aria-label="场景与行程">
         <div class="panel-head">
           <div>
-            <div class="overline">SCENES</div>
-            <h2>锦江区实景场景</h2>
+            <div class="overline" id="panel-kicker">SCENES</div>
+            <h2 id="panel-title">锦江区实景场景</h2>
           </div>
           <button class="icon-btn" id="btn-collapse" title="收起面板" aria-label="收起面板">
             <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
           </button>
         </div>
+        <div id="panel-modes" role="tablist" aria-label="面板">
+          <button type="button" class="mode on" id="tab-scenes" role="tab" aria-selected="true" aria-controls="panel-body">场景</button>
+          <button type="button" class="mode" id="tab-route" role="tab" aria-selected="false" aria-controls="route-body">行程</button>
+        </div>
         <div class="panel-body" id="panel-body"></div>
+        <div class="panel-body" id="route-body" role="tabpanel" hidden></div>
         <div class="panel-foot">
           <div class="foot-actions">
             <button class="act" id="btn-shot" type="button"><svg viewBox="0 0 24 24"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3" /><circle cx="12" cy="12" r="3" /></svg>导出截图</button>
@@ -66,7 +72,7 @@
       </div>
 
       <div id="hint">
-        <span><b>左键</b> 旋转</span><span><b>右键</b> 平移</span><span><b>滚轮</b> 缩放</span><span><b>双击</b> 聚焦</span><span><b>1–0 - =</b> 切换场景</span><span><b>H</b> 隐藏界面</span>
+        <span><b>左键</b> 旋转</span><span><b>右键</b> 平移</span><span><b>滚轮</b> 缩放</span><span><b>双击</b> 聚焦</span><span><b>1–0 - =</b> 切换场景</span><span><b>R</b> 行程</span><span><b>H</b> 隐藏界面</span>
       </div>
       <button class="icon-btn" id="btn-show" type="button" title="显示界面" aria-label="显示界面"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg></button>
       <div id="status" class="hidden"><span class="spin"></span><span id="status-text">生成中…</span></div>

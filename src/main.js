@@ -9,6 +9,7 @@ import { Post } from './scene/post.js';
 import { Rain } from './scene/rain.js';
 import { Panel } from './ui/panel.js';
 import { Hud } from './ui/hud.js';
+import { Itinerary } from './ui/itinerary.js';
 import { CameraRig } from './ui/cameraRig.js';
 import { loadCity } from './world/data.js';
 import { World } from './world/city.js';
@@ -59,6 +60,7 @@ let wantShot = false;
 let probe = null; // 测速采样（__gz.bench）
 let captureCb = null; // 调试截图（__gz.capture）
 let hashCam = ''; // 本页最近写入地址栏的 hash（用来区分用户粘贴的新链接）
+let itinerary = null;
 
 const hud = new Hud({
   onMapClick: (x, z) => {
@@ -81,7 +83,10 @@ const panel = new Panel({
     }
   },
 });
-rig.onInterrupt = () => setScene(null);
+rig.onInterrupt = () => {
+  setScene(null);
+  itinerary?.onUserInterrupt();
+};
 // 系统开启“减少动态效果”时：场景切换直接跳转、不做电影漫游与自动巡游
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -96,7 +101,8 @@ function setScene(id) {
   current = id;
   panel.setScene(id);
   if (id) {
-    hashCam = `scene=${id}`;
+    const extra = itinerary?.interestParam();
+    hashCam = `scene=${id}${extra ? `&interests=${extra}` : ''}`;
     history.replaceState(null, '', `#${hashCam}`);
   }
 }
@@ -314,7 +320,10 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   const si = SCENE_KEYS.indexOf(k);
   if (k === 'h') document.body.classList.toggle('ui-hidden');
-  else if (SCENES[si]) applyScene(SCENES[si].id);
+  else if (k === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    itinerary?.showTab('route');
+  } else if (SCENES[si]) applyScene(SCENES[si].id);
 });
 
 // 视图偏移：让画面焦点落在右侧面板左边的可视区域中央
@@ -510,14 +519,19 @@ function syncHash(now) {
   if (now - stillSince < 600) return;
   const o = D.meta.origin;
   const ll = (v) => [(v.x / o.kx + o.lon).toFixed(5), (-v.z / o.kz + o.lat).toFixed(5), v.y.toFixed(1)];
-  const h = `cam=${[...ll(camera.position), ...ll(rig.controls.target)].join(',')}&t=${params.timeOfDay}&w=${params.weather}`;
+  const extra = itinerary?.interestParam();
+  const h = `cam=${[...ll(camera.position), ...ll(rig.controls.target)].join(',')}&t=${params.timeOfDay}&w=${params.weather}${extra ? `&interests=${extra}` : ''}`;
   if (h !== hashCam) {
     hashCam = h;
     history.replaceState(null, '', `#${h}`);
   }
 }
+function readInterests(q) {
+  return (q.get('interests') || '').split(',').filter((id) => itinerary?.knownInterest(id));
+}
 function applyHash(instant) {
   const q = new URLSearchParams(location.hash.slice(1));
+  const interests = readInterests(q);
   const c = (q.get('cam') || '').split(',').map(Number);
   if (c.length === 6 && !c.some(Number.isNaN)) {
     const base = SCENES[0].atmos;
@@ -529,12 +543,20 @@ function applyHash(instant) {
     rig.controls.update();
     setScene(null);
     hashCam = location.hash.slice(1);
+    if (interests.length) itinerary.restore(interests, { frame: false, keepScene: true });
     return;
   }
   // 试落位阶段的旧链接在两栋样件纳入默认主城后指向对应的正式场景
   const legacy = { 'trial-c01': 'detail-christchurch', 'trial-c02': 'detail-specie', 'trial-overview': 'detail-shamian-west' };
   const id = legacy[q.get('scene')] || q.get('scene');
-  applyScene(SCENES.find((s) => s.id === id) ? id : SCENES[0].id, instant);
+  const scene = SCENES.find((s) => s.id === id);
+  if (interests.length && !scene) {
+    setScene(null);
+    itinerary.restore(interests, { frame: true, instant });
+    return;
+  }
+  applyScene(scene ? scene.id : SCENES[0].id, instant);
+  if (interests.length) itinerary.restore(interests, { frame: false, keepScene: true });
 }
 window.addEventListener('hashchange', () => D && location.hash.slice(1) !== hashCam && applyHash(false));
 
@@ -551,7 +573,7 @@ const touch = () => {
 };
 for (const ev of ['pointerdown', 'wheel', 'keydown', 'touchstart']) window.addEventListener(ev, touch, { passive: true, capture: true });
 function tour(now) {
-  if (reduceMotion.matches || probe || document.hidden || SCENES.some(s=>s.id===current&&s.group==='detail')) {
+  if (reduceMotion.matches || probe || document.hidden || itinerary?.hasRoute || SCENES.some(s=>s.id===current&&s.group==='detail')) {
     lastInput = now;
     return;
   }
@@ -634,6 +656,7 @@ function frame(now) {
     a.click();
     hud.toast('已导出当前视角截图');
   }
+  itinerary?.update(camera, window.innerWidth, window.innerHeight, now / 1000);
   hud.updateLabels(camera, window.innerWidth, window.innerHeight);
   if (frameN % 3 === 0) hud.drawCamera(camera, rig.controls.target);
   syncHash(now);
@@ -690,11 +713,61 @@ async function boot() {
     if (sc && sc.group === 'street' && !rig.busy) applyScene(current, true);
   });
 }
+itinerary = new Itinerary({
+  scene,
+  hud,
+  getCity: () => D,
+  project: (lon, lat) => {
+    const o = D.meta.origin;
+    return { x: (lon - o.lon) * o.kx, z: -(lat - o.lat) * o.kz };
+  },
+  reduceMotion: () => reduceMotion.matches,
+  onView: (pos, tgt, dur) => {
+    if (!dur) {
+      rig.path = null;
+      rig.tween = null;
+      rig.cine = null;
+      rig.controls.minDistance = 4;
+      camera.position.copy(pos);
+      rig.controls.target.copy(tgt);
+      rig.controls.update();
+      return;
+    }
+    rig.flyTo(pos, tgt, dur);
+  },
+  follow: (opts) => rig.followPath(opts.samples, opts),
+  stopMotion: () => {
+    rig.tween = null;
+    rig.cine = null;
+    rig._dropPath();
+  },
+  onStatus: (text) => (text ? hud.showStatus(text) : hud.hideStatus()),
+  onToast: (text) => hud.toast(text),
+  onLeaveScene: () => setScene(null),
+  getTime: () => params.timeOfDay,
+  setTime: (hour) => {
+    params = { ...params, timeOfDay: hour };
+    applyAtmos();
+  },
+  onHash: ({ keepScene = false } = {}) => {
+    const q = new URLSearchParams(location.hash.slice(1));
+    if (!keepScene) q.delete('scene');
+    const ids = itinerary?.interestParam();
+    if (ids) q.set('interests', ids);
+    else q.delete('interests');
+    const h = q.toString();
+    hashCam = h;
+    history.replaceState(null, '', h ? `#${h}` : `${location.pathname}${location.search}`);
+  },
+});
 boot();
 
 // 调试入口（控制台 window.__gz）
 window.__gz = {
   world, camera, rig, renderer, scene, atmos, post, water, SCENES,
+  get route() {
+    return itinerary?.route || null;
+  },
   get D() {
     return D;
   },
