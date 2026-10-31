@@ -4,13 +4,11 @@
 import { SECTORS } from './zone.js';
 
 const SECTOR_ALIAS = {
-  A: ['a区', 'a 区', '北区', '北侧', '北边', '驻点'],
-  B: ['b区', 'b 区', '东北'],
-  C: ['c区', 'c 区', '东区', '东侧', '东边'],
-  D: ['d区', 'd 区', '东南'],
-  E: ['e区', 'e 区', '南区', '南侧', '南边'],
-  F: ['f区', 'f 区', '西南'],
-  G: ['g区', 'g 区', '西北'],
+  A: ['a区', 'a 区', 'a座', 'a园', '北区', '北侧', '北边'],
+  B: ['b区', 'b 区', 'b座', 'b园'],
+  C: ['c区', 'c 区', 'c座', 'c园', '西南'],
+  D: ['d区', 'd 区', 'd座', 'd园', '南区', '南侧', '南边', '东南'],
+  E: ['e区', 'e 区', 'e座', 'e园', '东区', '东侧', '东边'],
 };
 
 const AGENT_ALIAS = {
@@ -83,10 +81,10 @@ export function parseCommand(input) {
     return { ok: true, actions: [{ kind: 'inject', type, sector }] };
   }
   if (/巡查|巡检|检查|看看|查看|前往|去|到/.test(text)) {
-    if (!sector) return { ok: false, reply: '没听清要去哪个区，可以说“C 区”或“东南”。' };
+    if (!sector) return { ok: false, reply: '没听清要去哪个区，可以说“C 区”或“D 区”。' };
     return { ok: true, actions: [{ kind: 'inspect', agent: agent || 'auto', sector }] };
   }
-  return { ok: false, reply: '暂时只能理解巡查、召回和模拟事件，例如“让无人机去 D 区巡查”“东区出现烟雾”。' };
+  return { ok: false, reply: '暂时只能理解巡查、召回和模拟事件，例如“让无人机去 D 区巡查”“E 区出现烟雾”。' };
 }
 
 // 在模拟里执行解析结果，返回要显示给用户的回复
@@ -144,5 +142,5 @@ export function runCommand(sim, parsed) {
   return out.join(' ');
 }
 
-export const EXAMPLES = ['让机器狗去 C 区巡查', '无人机去东南看看', 'E 区出现积水', '东边冒烟了', '召回所有智能体'];
+export const EXAMPLES = ['让机器狗去 C 区巡查', '无人机去 D 区看看', 'E 区出现积水', 'B 区冒烟了', '召回所有智能体'];
 

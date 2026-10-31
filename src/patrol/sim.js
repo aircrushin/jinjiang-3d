@@ -116,7 +116,8 @@ export class PatrolSim {
       sector = (at && this.sector(at)) || this.sectors[Math.floor(this.rand() * this.sectors.length)];
       const loop = this.groundLoop;
       const idx = this.sectors.indexOf(sector);
-      const p = loopPoint(loop, (loop.offsets[idx] || 0) + 30 + this.rand() * 90);
+      // 落在该分区点位之后 20–80 m；分区间隔最短约 170 m，不会越到下一个分区
+      const p = loopPoint(loop, (loop.offsets[idx] || 0) + 20 + this.rand() * 60);
       pos = { x: p.x, z: p.z };
     }
     const inc = {
@@ -211,6 +212,12 @@ export class PatrolSim {
   _startStep(inc, step) {
     const agent = this.pickAgent(step.role, inc);
     if (!agent) return false;
+    if (step.near && dist(agent, inc) > step.near) {
+      step.state = 'done';
+      step.skipped = true;
+      this.emit(`${agent.name}离${inc.sectorName}较远，跳过${step.act}`, 0, inc, 'info');
+      return true;
+    }
     step.agentId = agent.id;
     step.state = 'enroute';
     step.eta = this._send(agent, inc, { kind: 'step', incident: inc, step, dwell: step.dwell, label: step.act });

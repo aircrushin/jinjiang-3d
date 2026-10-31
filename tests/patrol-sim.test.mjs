@@ -5,8 +5,8 @@ import { makeRoute } from '../src/patrol/route.js';
 import { runCommand, parseCommand } from '../src/patrol/command.js';
 import { SECTORS } from '../src/patrol/zone.js';
 
-// 以场景原点为中心的合成投影：每个分区按经纬度差放大到几百米
-const project = (lon, lat) => ({ x: (lon - 104.1438) * 95000, z: -(lat - 30.5693) * 110000 });
+// 与真实场景同一投影原点，分区位置就是生态园 A–E 区的真实相对位置
+const project = (lon, lat) => ({ x: (lon - 104.087) * 95776.238, z: -(lat - 30.642) * 110750 });
 const planRoad = (a, b) => makeRoute([{ x: a.x, y: 0, z: a.z }, { x: b.x, y: 0, z: b.z }]);
 const make = (opts = {}) => new PatrolSim({ project, planRoad, ...opts });
 const run = (sim, seconds, dt = 0.1) => {
@@ -101,7 +101,7 @@ test('处置中的智能体不能被召回，巡查中的可以', () => {
   assert.equal(sim.recall(busy.id).ok, false);
   const dog = sim.agent('dog-1');
   if (dog.job) sim.recall(dog.id);
-  runCommand(sim, parseCommand('让机器狗去 F 区巡查'));
+  runCommand(sim, parseCommand('让机器狗去 D 区巡查'));
   assert.equal(sim.recall('dog-1').ok, true);
   assert.equal(dog.mode, 'back');
 });

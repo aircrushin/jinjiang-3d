@@ -2,6 +2,7 @@
 // 材质用 MeshBasicMaterial，不参与光照与阴影，所以白天夜里都清楚，也不增加阴影开销。
 
 import * as THREE from 'three';
+import { ZONE_AREAS } from './zone.js';
 
 const COLORS = { ground: 0x5fd0a4, air: 0x6fb4ff, human: 0xf2b84b };
 const LEVEL_COLORS = [0x9fb2c4, 0xf2d06b, 0xff9a4d, 0xff5a4d];
@@ -59,7 +60,7 @@ function ringGeometry(r, w = 0.5) {
 }
 
 export class PatrolView {
-  constructor(sim, { groundY }) {
+  constructor(sim, { groundY, project }) {
     this.sim = sim;
     this.groundY = groundY;
     this.group = new THREE.Group();
@@ -82,6 +83,7 @@ export class PatrolView {
     };
     this._buildAgents();
     this._buildRoutes();
+    this._buildAreas(project);
   }
 
   _mat(color, opacity = 1) {
@@ -161,6 +163,39 @@ export class PatrolView {
       this.group.add(m);
       return m;
     });
+  }
+
+  // 五个分区的真实轮廓：半透明地面填充 + 描边，让观众一眼看出功能区范围
+  _buildAreas(project) {
+    this.areas = [];
+    this.areaFills = [];
+    this.areaGroup = new THREE.Group();
+    for (const area of ZONE_AREAS) {
+      const pts = area.ring.map(([lon, lat]) => project(lon, lat));
+      const shape = new THREE.Shape(pts.map((p) => new THREE.Vector2(p.x, p.z)));
+      const fillGeo = new THREE.ShapeGeometry(shape);
+      fillGeo.rotateX(Math.PI / 2);
+      const pos = fillGeo.attributes.position;
+      for (let i = 0; i < pos.count; i++) pos.setY(i, this.groundY(pos.getX(i), pos.getZ(i)) + 0.35);
+      const fill = new THREE.Mesh(fillGeo, this._mat(0xe4b15a, 0.12));
+      fill.renderOrder = 2;
+      const edge = new THREE.LineLoop(
+        new THREE.BufferGeometry().setFromPoints(pts.map((p) => new THREE.Vector3(p.x, this.groundY(p.x, p.z) + 0.5, p.z))),
+        new THREE.LineBasicMaterial({ color: 0xe4b15a, transparent: true, opacity: 0.85, fog: false }),
+      );
+      this.areaFills.push(fill);
+      this.areaGroup.add(fill, edge);
+      const c = pts.reduce((a, p) => ({ x: a.x + p.x / pts.length, z: a.z + p.z / pts.length }), { x: 0, z: 0 });
+      this.areas.push({ id: area.id, name: area.name, x: c.x, z: c.z });
+    }
+    this.group.add(this.areaGroup);
+  }
+
+  // 填充不受光照影响，夜里要压低，否则会盖住灯光
+  setNight(night) {
+    if (this.night === night) return;
+    this.night = night;
+    for (const f of this.areaFills) f.material.opacity = night ? 0.025 : 0.12;
   }
 
   show(on) {

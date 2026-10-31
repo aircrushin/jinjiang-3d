@@ -4,13 +4,13 @@ import { parseCommand } from '../src/patrol/command.js';
 
 test('巡查指令能解析出智能体和分区', () => {
   assert.deepEqual(parseCommand('让机器狗去 C 区巡查').actions, [{ kind: 'inspect', agent: 'dog-1', sector: 'C' }]);
-  assert.deepEqual(parseCommand('无人机去东南看看').actions, [{ kind: 'inspect', agent: 'drone-1', sector: 'D' }]);
+  assert.deepEqual(parseCommand('无人机去 D 区看看').actions, [{ kind: 'inspect', agent: 'drone-1', sector: 'D' }]);
 });
 
-test('东南不会被“东”抢走，西北不会被“北”抢走', () => {
-  assert.equal(parseCommand('去东南巡查').actions[0].sector, 'D');
-  assert.equal(parseCommand('去西北巡查').actions[0].sector, 'G');
-  assert.equal(parseCommand('去西南巡查').actions[0].sector, 'F');
+test('分区字母不分大小写，空格可有可无', () => {
+  assert.equal(parseCommand('去 b区 巡查').actions[0].sector, 'B');
+  assert.equal(parseCommand('去B 区巡查').actions[0].sector, 'B');
+  assert.equal(parseCommand('去 e区 看看').actions[0].sector, 'E');
 });
 
 test('没说派谁时交给系统挑最近的', () => {
@@ -19,7 +19,7 @@ test('没说派谁时交给系统挑最近的', () => {
 
 test('模拟事件和召回', () => {
   assert.deepEqual(parseCommand('E 区出现积水').actions, [{ kind: 'inject', type: 'pond', sector: 'E' }]);
-  assert.deepEqual(parseCommand('模拟东边冒烟').actions, [{ kind: 'inject', type: 'smoke', sector: 'C' }]);
+  assert.deepEqual(parseCommand('模拟 B 区冒烟').actions, [{ kind: 'inject', type: 'smoke', sector: 'B' }]);
   assert.deepEqual(parseCommand('召回所有智能体').actions, [{ kind: 'recallAll' }]);
   assert.deepEqual(parseCommand('把无人机召回').actions, [{ kind: 'recall', agent: 'drone-1' }]);
 });

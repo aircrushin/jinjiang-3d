@@ -691,6 +691,7 @@ function frame(now) {
   itinerary?.update(camera, window.innerWidth, window.innerHeight, now / 1000);
   if (patrol) {
     patrol.ui.tick(dt, now / 1000);
+    patrol.view.setNight(params.timeOfDay < 5.5 || params.timeOfDay > 19);
     patrol.view.update(now / 1000);
     patrol.ui.updateTags(camera, window.innerWidth, window.innerHeight);
   }
@@ -758,7 +759,7 @@ function setupPatrol() {
   const project = (lon, lat) => ({ x: (lon - o.lon) * o.kx, z: -(lat - o.lat) * o.kz });
   const planRoad = (a, b) => makeRoute(planPath({ roads: D.roads, points: [a, b] }).points);
   const sim = new PatrolSim({ project, planRoad });
-  const view = new PatrolView(sim, { groundY: (x, z) => D.geo.height(x, z) });
+  const view = new PatrolView(sim, { groundY: (x, z) => D.geo.height(x, z), project });
   scene.add(view.group);
   const ui = new PatrolUi({
     sim,
