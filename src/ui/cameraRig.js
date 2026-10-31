@@ -1,10 +1,12 @@
-// 镜头：OrbitControls（旋转 / 平移 / 缩放）+ 预设视角平滑飞行 + 电影漫游路径 + 沿路线行走。
+// 镜头：方向键移动地图，左键旋转、右键平移、滚轮缩放，外加预设视角飞行、电影漫游和沿路线行走。
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
+// 与 OrbitControls 的方向键一致：上键朝画面上方移动，左右键横向移动。
+const ARROWS = { ArrowUp: [0, 1], ArrowDown: [0, -1], ArrowLeft: [1, 0], ArrowRight: [-1, 0] };
 
 export class CameraRig {
   constructor(camera, dom) {
@@ -22,6 +24,12 @@ export class CameraRig {
     c.panSpeed = 1.0;
     c.zoomSpeed = 1.15;
     c.autoRotateSpeed = 0.35;
+    this._keys = new Set();
+    this._onKeyDown = (e) => this._key(e, true);
+    this._onKeyUp = (e) => this._key(e, false);
+    window.addEventListener('keydown', this._onKeyDown);
+    window.addEventListener('keyup', this._onKeyUp);
+    window.addEventListener('blur', () => this._keys.clear());
     c.addEventListener('start', () => {
       if (this.tween || this.cine || this.path || c.autoRotate) this.onInterrupt?.();
       this.tween = null;
@@ -129,7 +137,39 @@ export class CameraRig {
   get busy() {
     return !!(this.tween || this.cine || this.path);
   }
+  _key(e, down) {
+    if (!ARROWS[e.code]) return;
+    const el = e.target;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.isContentEditable)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    e.preventDefault();
+    if (down) this._keys.add(e.code);
+    else this._keys.delete(e.code);
+  }
+  _moveKeys(dt) {
+    if (!this._keys.size) return;
+    let x = 0;
+    let y = 0;
+    for (const code of this._keys) {
+      const d = ARROWS[code];
+      x += d[0];
+      y += d[1];
+    }
+    if (!x && !y) return;
+    const c = this.controls;
+    if (this.tween || this.cine || this.path || c.autoRotate) {
+      this.onInterrupt?.();
+      this.tween = null;
+      this.cine = null;
+      this._dropPath();
+      c.autoRotate = false;
+    }
+    const len = Math.hypot(x, y) || 1;
+    const px = (c.domElement?.clientHeight || 800) * 0.85 * dt;
+    c._pan((x / len) * px, (y / len) * px);
+  }
   update(dt) {
+    this._moveKeys(dt);
     const c = this.controls;
     if (this.tween) {
       const tw = this.tween;
