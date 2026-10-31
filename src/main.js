@@ -10,6 +10,11 @@ import { Rain } from './scene/rain.js';
 import { Panel } from './ui/panel.js';
 import { Hud } from './ui/hud.js';
 import { Itinerary } from './ui/itinerary.js';
+import { PatrolSim } from './patrol/sim.js';
+import { PatrolView } from './patrol/view.js';
+import { PatrolUi } from './patrol/ui.js';
+import { makeRoute } from './patrol/route.js';
+import { planPath } from './tour/planner.js';
 import { CameraRig, WALK_EYE } from './ui/cameraRig.js';
 import { makeWalkProbe } from './ui/walkCollider.js';
 import { loadCity } from './world/data.js';
@@ -62,6 +67,7 @@ let probe = null; // 测速采样（__gz.bench）
 let captureCb = null; // 调试截图（__gz.capture）
 let hashCam = ''; // 本页最近写入地址栏的 hash（用来区分用户粘贴的新链接）
 let itinerary = null;
+let patrol = null; // { sim, view, ui }，城市数据到齐后创建
 
 const hud = new Hud({
   onMapClick: (x, z) => {
@@ -598,7 +604,7 @@ const touch = () => {
 };
 for (const ev of ['pointerdown', 'wheel', 'keydown', 'touchstart']) window.addEventListener(ev, touch, { passive: true, capture: true });
 function tour(now) {
-  if (rig.walking || reduceMotion.matches || probe || document.hidden || itinerary?.hasRoute || SCENES.some(s=>s.id===current&&s.group==='detail')) {
+  if (rig.walking || reduceMotion.matches || probe || document.hidden || itinerary?.hasRoute || patrol?.ui.active || SCENES.some(s=>s.id===current&&s.group==='detail')) {
     lastInput = now;
     return;
   }
@@ -683,6 +689,11 @@ function frame(now) {
     hud.toast('已导出当前视角截图');
   }
   itinerary?.update(camera, window.innerWidth, window.innerHeight, now / 1000);
+  if (patrol) {
+    patrol.ui.tick(dt, now / 1000);
+    patrol.view.update(now / 1000);
+    patrol.ui.updateTags(camera, window.innerWidth, window.innerHeight);
+  }
   hud.updateLabels(camera, window.innerWidth, window.innerHeight);
   if (frameN % 3 === 0) hud.drawCamera(camera, rig.controls.target);
   syncHash(now);
@@ -708,6 +719,7 @@ async function boot() {
     loaderSub.textContent = `构建：${s}`;
   });
   rig.walkProbe = makeWalkProbe(D);
+  setupPatrol();
   if(detailTrialEnabled){const {mountDetailTrial}=await import('./ui/detail-trial.js');mountDetailTrial(world,D,applyScene);}
   steps.push(`${sn} ${Math.round(performance.now() - ts)}`);
   hud.setLabels(world.labels);
@@ -740,6 +752,41 @@ async function boot() {
     if (sc && sc.group === 'street' && !rig.busy) applyScene(current, true);
   });
 }
+// ---------- 白鹭湾巡检 ----------
+function setupPatrol() {
+  const o = D.meta.origin;
+  const project = (lon, lat) => ({ x: (lon - o.lon) * o.kx, z: -(lat - o.lat) * o.kz });
+  const planRoad = (a, b) => makeRoute(planPath({ roads: D.roads, points: [a, b] }).points);
+  const sim = new PatrolSim({ project, planRoad });
+  const view = new PatrolView(sim, { groundY: (x, z) => D.geo.height(x, z) });
+  scene.add(view.group);
+  const ui = new PatrolUi({
+    sim,
+    view,
+    hud,
+    onToggle: (on) => {
+      // 进入巡检时切到总览机位，离开时保留当前视角
+      if (on && !SCENES.some((s) => s.id === current && s.id.startsWith('bailuwan'))) applyScene('bailuwan');
+    },
+    focus: (id, kind) => {
+      if (kind === 'agent') {
+        const a = sim.agent(id);
+        ui.select(id);
+        const at = new THREE.Vector3(a.x, D.geo.height(a.x, a.z) + (a.role === 'air' ? a.curAlt : 0), a.z);
+        const off = new THREE.Vector3(-70, a.role === 'air' ? 55 : 45, 90);
+        rig.flyTo(at.clone().add(off), at, 1.4);
+      } else {
+        const inc = sim.incidents.find((i) => i.id === id);
+        if (!inc) return;
+        const at = new THREE.Vector3(inc.x, D.geo.height(inc.x, inc.z), inc.z);
+        rig.flyTo(at.clone().add(new THREE.Vector3(-80, 70, 110)), at, 1.4);
+      }
+      setScene(null);
+    },
+  });
+  patrol = { sim, view, ui };
+}
+
 itinerary = new Itinerary({
   scene,
   hud,
@@ -793,6 +840,9 @@ boot();
 // 调试入口（控制台 window.__gz）
 window.__gz = {
   world, camera, rig, renderer, scene, atmos, post, water, SCENES,
+  get patrol() {
+    return patrol;
+  },
   get route() {
     return itinerary?.route || null;
   },

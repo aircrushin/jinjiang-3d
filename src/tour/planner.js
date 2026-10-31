@@ -493,3 +493,41 @@ class Heap {
     return top.i;
   }
 }
+
+// 点到点沿路网寻路，供巡检智能体复用。points 是场景坐标 {x, z}，吸附不到路网时该段走直线。
+export function planPath({ roads, points, snap = SNAP, step = 8 }) {
+  if (!points || points.length < 2) return null;
+  const graph = graphFor(roads || []);
+  const raw = [];
+  let directLegs = 0;
+  const push = (x, y, z) => {
+    const last = raw[raw.length - 1];
+    if (last && Math.hypot(last.x - x, last.z - z) < 1) return;
+    raw.push({ x, y: y || 0, z });
+  };
+  const hits = points.map((p) => {
+    const i = graph.nodes.length ? nearest(graph, p.x, p.z, snap) : -1;
+    return i >= 0 ? { ...graph.nodes[i], i } : { x: p.x, y: 0, z: p.z, i: -1 };
+  });
+  push(hits[0].x, hits[0].y, hits[0].z);
+  for (let k = 1; k < hits.length; k++) {
+    const a = hits[k - 1];
+    const b = hits[k];
+    if (a.i >= 0 && b.i >= 0 && a.i !== b.i) {
+      const path = astar(graph.nodes, a.i, b.i);
+      if (path) {
+        for (const idx of path) push(graph.nodes[idx].x, graph.nodes[idx].y, graph.nodes[idx].z);
+        continue;
+      }
+    }
+    if (!(a.i >= 0 && a.i === b.i)) directLegs += 1;
+    const steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 16));
+    for (let s = 1; s <= steps; s++) {
+      const t = s / steps;
+      push(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+    }
+  }
+  const pts = raw.length > 1 ? resample(raw, step) : raw.map((p) => ({ ...p }));
+  const cum = cumulative(pts);
+  return { points: pts, cum, length: cum[cum.length - 1] || 0, directLegs, snapped: hits.map((h) => ({ x: h.x, y: h.y, z: h.z })) };
+}
