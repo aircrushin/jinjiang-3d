@@ -29,19 +29,27 @@ export class PatrolSim {
     this.planRoad = planRoad;
     // 事件落点：{ 类别: [{ x, z, label, sector }] }，类别与 INCIDENT_TYPES 里的 spots 对应
     this.spots = { ...spots };
-    this.rand = mulberry32(seed);
+    this.seed = seed;
+    this.defs = defs;
     this.groundLoop = buildLoop(this.sectors, (a, b) => planRoad(a, b));
     this.airLoop = buildLoop(this.sectors, (a, b) => straightRoute(a, b));
+    this.env = { rain: false, night: false };
+    this.onEvent = null;
+    this.reset();
+  }
+
+  // 回到刚创建时的状态：时间归零、事件和统计清空、智能体回驻点，随机序列也从头开始，
+  // 所以同一个种子每次重置后走出来的过程都一样。环线、落点和昼夜雨天设置保持不变。
+  reset() {
+    this.rand = mulberry32(this.seed);
     this.t = 0;
     this.auto = false;
-    this.env = { rain: false, night: false };
     this.nextAuto = this._gap();
     this.nextId = 1;
     this.incidents = [];
     this.history = []; // 已处置事件的耗时，清出列表后统计仍然保留
     this.events = [];
-    this.onEvent = null;
-    this.agents = defs.map((def) => this._makeAgent(def));
+    this.agents = this.defs.map((def) => this._makeAgent(def));
   }
 
   _gap() {

@@ -771,6 +771,7 @@ function setupPatrol() {
     sim,
     view,
     hud,
+    onScene: (id) => applyScene(id),
     onToggle: (on) => {
       // 进入巡检时切到总览机位，离开时保留当前视角
       if (on && !SCENES.some((s) => s.id === current && s.id.startsWith('bailuwan'))) applyScene('bailuwan');

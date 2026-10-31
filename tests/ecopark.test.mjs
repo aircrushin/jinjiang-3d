@@ -75,6 +75,14 @@ test('配套设施落在分区内，不压在建筑上', async (t) => {
   }
 });
 
+test('落点标签不带分区名，免得和事件里单独显示的分区名重复', async (t) => {
+  const D = await city(t);
+  const eco = buildEcoPark(D);
+  for (const [kind, list] of Object.entries(eco.spots)) {
+    for (const s of list) assert.ok(!/^[A-E]区/.test(s.label), `${kind} 的标签 "${s.label}" 带了分区名`);
+  }
+});
+
 test('每类事件都有可用的落点', async (t) => {
   const D = await city(t);
   const eco = buildEcoPark(D);

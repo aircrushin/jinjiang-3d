@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { INCIDENT_TYPES, LEVEL_NAME, ROLE_NAME, ZONE } from './zone.js';
 import { EXAMPLES, parseCommand, runCommand } from './command.js';
+import { DemoRunner, DEMO_STEPS } from './demo.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const clock = (t) => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
@@ -12,12 +13,13 @@ const STEP_TEXT = { pending: '待派', enroute: '在途', working: '处置', don
 const SPEEDS = [1, 2, 4];
 
 export class PatrolUi {
-  constructor({ sim, view, hud, focus, onToggle }) {
+  constructor({ sim, view, hud, focus, onToggle, onScene }) {
     this.sim = sim;
     this.view = view;
     this.hud = hud;
     this.focus = focus;
     this.onToggle = onToggle;
+    this.onScene = onScene;
     this.speed = 1;
     this.running = true;
     this.active = false;
@@ -31,6 +33,7 @@ export class PatrolUi {
     this._v = new THREE.Vector3();
     this.body.innerHTML = `
       <p class="route-lead">${esc(ZONE.name)}的孪生巡检演示。地面、空中和现场三类智能体沿道路自动巡逻，发现异常后自动派单。<b>所有设备与事件均为模拟。</b></p>
+      <button type="button" class="act primary pt-demo" id="pt-demo" aria-pressed="false">一键演示（约 2 分钟）</button>
       <div class="pt-bar">
         <button type="button" class="act" id="pt-run" aria-pressed="false">暂停</button>
         <button type="button" class="act" id="pt-speed">倍速 1×</button>
@@ -66,6 +69,24 @@ export class PatrolUi {
     document.getElementById('tab-scenes').addEventListener('click', () => this.show(false));
     document.getElementById('tab-route').addEventListener('click', () => this.show(false));
     sim.onEvent = (ev) => this.onSimEvent(ev);
+    this.captionEl = document.getElementById('patrol-caption');
+    this.demo = new DemoRunner(DEMO_STEPS, {
+      sim,
+      last: null,
+      caption: (t) => this.setCaption(t),
+      scene: (id) => {
+        this.sim.setEnv({ night: id === 'bailuwan-night' });
+        this.onScene?.(id);
+      },
+      focus: (id, kind) => this.focus(id, kind),
+      command: (t) => this.command(t),
+      inject: (type, at) => this.sim.inject(type, at),
+      auto: (on) => {
+        this.sim.auto = on;
+      },
+      onStart: () => this.onDemoStart(),
+      onStop: (finished) => this.onDemoStop(finished),
+    });
     this.renderStatic();
   }
 
@@ -73,6 +94,7 @@ export class PatrolUi {
   show(on) {
     if (this.active === on) return;
     this.active = on;
+    if (!on) this.demo.stop();
     document.getElementById('patrol-body').hidden = !on;
     document.getElementById('tab-patrol').classList.toggle('on', on);
     document.getElementById('tab-patrol').setAttribute('aria-selected', String(on));
@@ -135,12 +157,46 @@ export class PatrolUi {
     } else if (id === 'pt-auto') {
       this.sim.auto = !this.sim.auto;
       this.render(true);
+    } else if (id === 'pt-demo') {
+      if (this.demo.active) this.demo.stop();
+      else this.demo.start();
     }
   }
 
   onSimEvent(ev) {
     if (ev.kind === 'detect') this.hud.toast(ev.text);
     else if (ev.kind === 'resolved') this.hud.toast(ev.text);
+  }
+
+  setCaption(text) {
+    this.captionEl.textContent = text;
+    this.captionEl.hidden = false;
+  }
+
+  // 演示从头开始：模拟回到初始状态，昼夜雨天、自动出事件、选中和日志都清掉
+  onDemoStart() {
+    this.sim.reset();
+    this.sim.setEnv({ rain: false, night: false });
+    this.demo.ctx.last = null;
+    this.selected = null;
+    this.view.select(null);
+    this.running = true;
+    this.logCount = 0;
+    document.getElementById('pt-log').innerHTML = '';
+    document.getElementById('pt-reply').textContent = '';
+    const btn = document.getElementById('pt-demo');
+    btn.textContent = '结束演示';
+    btn.setAttribute('aria-pressed', 'true');
+    this.render(true);
+  }
+
+  onDemoStop(finished) {
+    this.captionEl.hidden = true;
+    const btn = document.getElementById('pt-demo');
+    btn.textContent = '一键演示（约 2 分钟）';
+    btn.setAttribute('aria-pressed', 'false');
+    if (finished) this.hud.toast('演示结束，可以继续手动操作');
+    this.render(true);
   }
 
   select(id) {
@@ -179,6 +235,8 @@ export class PatrolUi {
       // 一帧里太长会让寻路小段跳变，拆成 ≤0.1 s 的小步
       const n = Math.max(1, Math.ceil(step / 0.1));
       for (let i = 0; i < n; i++) this.sim.tick(step / n);
+      // 演示按模拟时间走，所以暂停和倍速都对它生效
+      if (this.demo.active) this.demo.tick(step);
     }
     if (now - this.lastRender > 0.25) {
       this.lastRender = now;
