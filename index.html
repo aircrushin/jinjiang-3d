@@ -35,6 +35,7 @@
       <canvas id="viewport" aria-label="成都锦江区城市三维视口"></canvas>
       <div id="labels" aria-hidden="true"></div>
       <div id="route-pins"></div>
+      <div id="patrol-tags" hidden></div>
 
       <div id="tree-inspection-note" hidden role="status">树木暂隐 · 仅供模型检查</div>
 
@@ -51,9 +52,11 @@
         <div id="panel-modes" role="tablist" aria-label="面板">
           <button type="button" class="mode on" id="tab-scenes" role="tab" aria-selected="true" aria-controls="panel-body">场景</button>
           <button type="button" class="mode" id="tab-route" role="tab" aria-selected="false" aria-controls="route-body">行程</button>
+          <button type="button" class="mode" id="tab-patrol" role="tab" aria-selected="false" aria-controls="patrol-body">巡检</button>
         </div>
         <div class="panel-body" id="panel-body"></div>
         <div class="panel-body" id="route-body" role="tabpanel" hidden></div>
+        <div class="panel-body" id="patrol-body" role="tabpanel" hidden></div>
         <div class="panel-foot">
           <div class="foot-actions">
             <button class="act" id="btn-walk" type="button" aria-pressed="false" title="方向键进退与转向，拖动环顾，Shift 加速，V 键切换">第一人称游览</button>

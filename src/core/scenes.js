@@ -7,6 +7,8 @@ export const SCENES = [
   { id: 'anshun', name: '安顺廊桥', sub: '锦江岸线与桥梁真实空间关系', icon: 'night', atmos: { timeOfDay: 20.4, weather: 'clear', haze: 28, lightIntensity: 135, exposure: 104 }, cam: [104.08245, 30.64475, 2.2], tgt: [104.0835001, 30.6441250, 1.5], bank: true },
   { id: 'jiuyan', name: '九眼桥夜景', sub: '九眼桥与东门码头一带夜景', icon: 'night', atmos: { timeOfDay: 21.0, weather: 'humid', haze: 36, lightIntensity: 145, exposure: 105 }, cam: [104.0894, 30.6388, 105], tgt: [104.0863304, 30.6423694, 8] },
   { id: 'jinjiang-top', name: '锦江区全景', sub: '行政边界与缓冲区全域鸟瞰', icon: 'top', atmos: { timeOfDay: 12.5, weather: 'clear', haze: 24, lightIntensity: 100, exposure: 100 }, cam: [104.105, 30.61, 2200], tgt: [104.105, 30.625, 0] },
+  { id: 'bailuwan', name: '白鹭湾总部区俯瞰', sub: '白鹭湾新经济总部功能区 · 巡检孪生', icon: 'top', atmos: { timeOfDay: 16.4, weather: 'clear', haze: 22, lightIntensity: 105, exposure: 102 }, cam: [104.1368, 30.5622, 520], tgt: [104.1445, 30.5694, 0] },
+  { id: 'bailuwan-night', name: '白鹭湾夜间巡检', sub: '低空视角 · 灯光下的巡逻环线', icon: 'night', atmos: { timeOfDay: 20.6, weather: 'clear', haze: 26, lightIntensity: 135, exposure: 104 }, cam: [104.1478, 30.5655, 210], tgt: [104.1443, 30.5693, 0] },
   { id: 'rain', name: '锦江雨幕', sub: '昼夜与天气效果', icon: 'rain', atmos: { timeOfDay: 15.0, weather: 'rain', haze: 60, lightIntensity: 110, exposure: 100 }, cam: [104.077, 30.652, 180], tgt: [104.081, 30.646, 10] },
 ];
 export const DEFAULT_ATMOS = { timeOfDay: 17.9, weather: 'humid', haze: 34, lightIntensity: 100, exposure: 100 };
