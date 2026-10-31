@@ -6,6 +6,7 @@ data/raw/
 .playwright-mcp/
 debug-map.png
 node_modules/
+.vercel/
 .DS_Store
 *.log
 
@@ -21,3 +22,5 @@ __pycache__/
 
 data/source/*.osm.pbf
 /output
+.vercel
+.env*
