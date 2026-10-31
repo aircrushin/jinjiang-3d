@@ -571,8 +571,6 @@ function tour(now) {
 // ---------- 主循环 ----------
 let last = performance.now();
 let frameN = 0;
-let perfFrames = 0;
-let perfT = performance.now();
 renderer.info.autoReset = false;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -614,12 +612,6 @@ function frame(now) {
   if (probe) {
     const r = renderer.info.render;
     probe.push([dt * 1000, performance.now() - cpu0, r.calls - pre[0], r.triangles - pre[1], pre[0], pre[1]]);
-  }
-  perfFrames++;
-  if (now - perfT > 1000) {
-    hud.setPerf((perfFrames * 1000) / (now - perfT), renderer.info.render.calls);
-    perfFrames = 0;
-    perfT = now;
   }
   if (captureCb) {
     const cb = captureCb;
@@ -672,7 +664,6 @@ async function boot() {
   D.onDetailActive = (active) => hud.setDetailActive(active);
   hud.setDetailActive(new Set((world.details?.status() || []).filter((s) => s.active).map((s) => s.id)));
   hud.drawMap(D);
-  hud.setStats(world.stats);
   rig.controls.maxTargetRadius = 14000;
   const date = (D.meta.osmTimestamp || '').slice(0, 10);
   document.getElementById('attrib').textContent = `地图数据 © OpenStreetMap 贡献者（ODbL）· ${date}`;

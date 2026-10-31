@@ -1,16 +1,13 @@
-// 视口叠加层：统计胶囊、三维地标 / 片区标注、城市小地图（真实水系、绿地、路网与建筑）、状态与提示。
+// 视口叠加层：三维地标 / 片区标注、城市小地图（真实水系、绿地、路网与建筑）、状态与提示。
 
 import * as THREE from 'three';
 import { RC } from '../world/data.js';
 import { BLD, FILL } from '../world/schema.js';
 import { ST } from '../world/parts.js';
 
-const fmtN = (n) => n.toLocaleString('zh-CN');
-
 export class Hud {
   constructor(opts) {
     this.o = opts;
-    this.chips = document.getElementById('chips');
     this.labelsEl = document.getElementById('labels');
     this.mm = document.getElementById('mm-canvas');
     this.mmCtx = this.mm.getContext('2d');
@@ -22,9 +19,6 @@ export class Hud {
     this.toastEl = document.getElementById('toast');
     this.labels = [];
     this.v = new THREE.Vector3();
-    // 统计胶囊的屏幕区域只在尺寸或内容变化时重新读取（每帧读取会强制浏览器重排）
-    this.chipsR = null;
-    window.addEventListener('resize', () => (this.chipsR = null));
     this.mm.addEventListener('click', (e) => {
       if (!this.map) return;
       const r = this.mm.getBoundingClientRect();
@@ -43,25 +37,6 @@ export class Hud {
       ['锦江区行政边界', '#ffd166'],
     ];
     legend.innerHTML = items.map(([t, c]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
-  }
-
-  setStats(s) {
-    const items = [
-      ['建筑', s.buildings, '#e8e2d4'],
-      ['骑楼', s.qilou, '#ffb35c'],
-      ['超高层', s.tall, '#7fb0ff'],
-      ['树木', s.trees, '#5fc28a'],
-      ['桥梁', s.bridges, '#ffb86b'],
-      ['道路', `${s.roadKm} km`, '#cfd3d6'],
-    ];
-    this.chips.innerHTML =
-      items.map(([t, v, c]) => `<span class="chip"><i style="background:${c}"></i>${t} <b>${typeof v === 'number' ? fmtN(v) : v}</b></span>`).join('') +
-      `<span class="chip" id="chip-fps" title="帧率 / 绘制调用">帧率 <b>--</b></span>`;
-  }
-  setPerf(fps, calls) {
-    const el = document.getElementById('chip-fps');
-    if (el) el.innerHTML = `帧率 <b>${Math.round(fps)}</b> · ${fmtN(calls)} DC`;
-    this.chipsR = null;
   }
 
   showStatus(text) {
@@ -121,9 +96,8 @@ export class Hud {
       cands.push(l);
     }
     cands.sort((p, q) => p.pri - q.pri || p.d - q.d);
-    // 预留区域：左上标题与统计胶囊、左下小地图
-    const cr = this.chipsR || (this.chipsR = this.chips.getBoundingClientRect());
-    const placed = [[0, 0, Math.max(cr.right + 6, 360), Math.max(cr.bottom + 6, 100)]];
+    // 预留区域：左下小地图
+    const placed = [[0, 0, 16, 16]];
     const mm = document.getElementById('minimap');
     if (mm.style.display !== 'none') placed.push([0, h - 270, 380, h]);
     for (const l of this.labels) l.show = false;
