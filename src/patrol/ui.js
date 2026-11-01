@@ -128,7 +128,7 @@ export class PatrolUi {
     const inj = e.target.closest('[data-inject]');
     if (inj) {
       const type = inj.dataset.inject;
-      // 落在无人机或巡检犬前方，保证演示时能被先发现；没有可用者时随机落点
+      // 落在无人机或机器狗前方，保证演示时能被先发现；没有可用者时随机落点
       const lead = this.sim.agents.find((a) => a.patrol && a.mode === 'patrol');
       const inc = this.sim.inject(type, lead ? { ahead: lead.id, meters: 90 } : null);
       if (inc) this.hud.toast(`已模拟：${inc.sectorName}${inc.name}`);

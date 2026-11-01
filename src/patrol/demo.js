@@ -84,7 +84,7 @@ export const DEMO_STEPS = [
   },
   { wait: 2, run: lookAtLast },
   { wait: 3, until: detected, max: 30, run: (ctx) => ctx.caption(`${finder(ctx)} 发现了异常，系统自动派单。烟雾风险高，空中确认和现场处置同时出发。`) },
-  { wait: 6, run: (ctx) => ctx.caption('无人机飞去确认火情，安保员驾车赶往现场。') },
+  { wait: 6, run: (ctx) => ctx.caption('无人机飞去确认火情，无人车赶往现场。') },
   {
     wait: 5,
     until: closed,
@@ -115,7 +115,7 @@ export const DEMO_STEPS = [
     run: (ctx) => {
       ctx.scene('bailuwan-night');
       ctx.last = ctx.inject('lamp');
-      ctx.caption(`切到夜间。路灯故障只在夜间自动出现，这里模拟一起${ctx.last ? `（${where(ctx.last)}）` : ''}，由安保员报修检查。`);
+      ctx.caption(`切到夜间。路灯故障只在夜间自动出现，这里模拟一起${ctx.last ? `（${where(ctx.last)}）` : ''}，派无人车前往检查。`);
     },
   },
   { wait: 3, run: lookAtLast },

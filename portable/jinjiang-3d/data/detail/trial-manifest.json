@@ -1,0 +1,840 @@
+{
+  "version": 1,
+  "acceptedPrototype": "P2 / user continued to P3",
+  "baseOsmTimestamp": "2026-09-23T22:20:37Z",
+  "precision": "estimated",
+  "coordinateSystem": {
+    "kind": "existing-city-local",
+    "origin": {
+      "lon": 113.296,
+      "lat": 23.1185,
+      "kx": 102380.42171271454,
+      "kz": 110750
+    }
+  },
+  "tiles": [
+    {
+      "kind": "buildings",
+      "bounds": [
+        -5595.468854160485,
+        921.373550000145,
+        -5485.594185579082,
+        1027.3613000001064
+      ],
+      "buildings": [
+        {
+          "sampleId": "B1",
+          "sourceId": "osm:w352610322",
+          "replaceIds": [
+            "osm:w352610322"
+          ],
+          "position": [
+            -5583.879390422547,
+            0,
+            937.0003749999943
+          ],
+          "rotationY": -0.032166242423871914,
+          "footprint": [
+            [
+              -5594.486002112197,
+              921.373550000145
+            ],
+            [
+              -5572.289926684469,
+              922.0823500001653
+            ],
+            [
+              -5573.272778734213,
+              952.6272000002444
+            ],
+            [
+              -5595.468854160485,
+              951.9184000002241
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "short south edge facing Shamian street",
+          "scale": [
+            0.9994324547177613,
+            1,
+            1.0000021781333004
+          ],
+          "integration": {
+            "status": "default",
+            "since": "2026-09-25",
+            "record": "docs/P3-首批城市集成-2026-09-25.md"
+          },
+          "label": {
+            "name": "台湾银行旧址",
+            "sub": "精细外观参考 · 尺寸估计",
+            "y": 14
+          }
+        },
+        {
+          "sampleId": "B2",
+          "sourceId": "osm:w352610258",
+          "replaceIds": [
+            "osm:w352610258"
+          ],
+          "position": [
+            -5530.62109504764,
+            0,
+            1006.706425000187
+          ],
+          "rotationY": 3.109256523655662,
+          "footprint": [
+            [
+              -5517.465210857513,
+              986.8489500000113
+            ],
+            [
+              -5518.775680256201,
+              1027.3613000001064
+            ],
+            [
+              -5543.776979238176,
+              1026.5639000002311
+            ],
+            [
+              -5542.466509839488,
+              986.0515500001359
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face F0 provisionally on north short edge; reported main entrance street is to east, not identified with F0",
+          "scale": [
+            0.9994010732265537,
+            1,
+            1.000021231918016
+          ],
+          "integration": {
+            "status": "default",
+            "since": "2026-09-25",
+            "record": "docs/P3-首批城市集成-2026-09-25.md"
+          },
+          "heightReference": {
+            "landmark": "eave",
+            "value": 20.6,
+            "unit": "m",
+            "status": "reported",
+            "sourceId": "shamian3Completion2023",
+            "pages": [
+              13,
+              21
+            ],
+            "independentlyMeasured": false,
+            "datum": "report does not specify vertical datum; model ground zero remains inferred",
+            "modelAnchorInterpretation": "upper cornice control line; detailed section drawing not provided"
+          },
+          "label": {
+            "name": "沙面一街3号",
+            "sub": "文献檐高 20.6m · 其余尺寸估计",
+            "y": 22.6
+          }
+        },
+        {
+          "sampleId": "B3",
+          "sourceId": "osm:w392765468",
+          "replaceIds": [
+            "osm:w392765468",
+            "osm:w1521332870"
+          ],
+          "position": [
+            -5490.594287426985,
+            0,
+            935.9197455569067
+          ],
+          "rotationY": -0.048396537887505885,
+          "footprint": [
+            [
+              -5494.378425761388,
+              923.1566250001287
+            ],
+            [
+              -5485.594185579082,
+              923.5774749999317
+            ],
+            [
+              -5486.781798470279,
+              948.075375000169
+            ],
+            [
+              -5489.197976423291,
+              947.9424750001897
+            ],
+            [
+              -5489.3208329293275,
+              951.7079750001258
+            ],
+            [
+              -5493.108908531864,
+              951.586150000276
+            ],
+            [
+              -5492.986052025827,
+              947.8206499999465
+            ],
+            [
+              -5495.566038654039,
+              947.6766750002312
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "short south edge facing Shamian street",
+          "scale": [
+            0.9994675065029682,
+            1,
+            1.0000149868595498
+          ],
+          "integration": {
+            "status": "default",
+            "since": "2026-09-25",
+            "record": "docs/P3-首批城市集成-2026-09-25.md"
+          },
+          "label": {
+            "name": "露德圣母堂",
+            "sub": "精细外观参考 · 尺寸估计",
+            "y": 23
+          }
+        }
+      ],
+      "id": "shamian",
+      "url": "./data/detail/shamian.json",
+      "bytes": 8719,
+      "sha256": "f4fa8465483e22bcd9d2e9757d6cadfc660a2ade1a65c4e17c08af3274519b0e"
+    },
+    {
+      "kind": "buildings",
+      "bounds": [
+        -6120.74184579985,
+        904.7278249999922,
+        -5945.742990966134,
+        997.7578250000114
+      ],
+      "buildings": [
+        {
+          "sampleId": "C01",
+          "sourceId": "osm:w509641361",
+          "replaceIds": [
+            "osm:w509641361",
+            "osm:w509641363"
+          ],
+          "position": [
+            -6114.000095030212,
+            0,
+            982.3829562503486
+          ],
+          "rotationY": -0.02129106953797481,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -6120.260657818724,
+              970.6573000000498
+            ],
+            [
+              -6120.74184579985,
+              993.8372750002306
+            ],
+            [
+              -6116.319011582552,
+              993.9591000000805
+            ],
+            [
+              -6116.452106130152,
+              997.6138500002962
+            ],
+            [
+              -6112.704982695324,
+              997.7578250000114
+            ],
+            [
+              -6112.571888147725,
+              994.0920000000597
+            ],
+            [
+              -6107.739532243155,
+              994.1030750001892
+            ],
+            [
+              -6107.258344260575,
+              970.9341750001377
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "source south edge; photo orientation remains provisional",
+          "label": {
+            "name": "基督教沙面会堂",
+            "sub": "精细外观参考 · 高度与细部尺寸估计",
+            "y": 21.4
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p3-acceptance/trial-validation.json"
+          }
+        },
+        {
+          "sampleId": "C02",
+          "sourceId": "osm:w352610288",
+          "replaceIds": [
+            "osm:w352610288"
+          ],
+          "position": [
+            -5958.01328450885,
+            0,
+            922.8133000000512
+          ],
+          "rotationY": -0.03368809933571028,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -5945.742990966134,
+              905.5141500001316
+            ],
+            [
+              -5946.951079943368,
+              940.89877500011
+            ],
+            [
+              -5970.283578051565,
+              940.1124499999706
+            ],
+            [
+              -5969.075489074332,
+              904.7278249999922
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "source south edge; photo orientation remains provisional",
+          "label": {
+            "name": "正金银行旧址",
+            "sub": "精细外观参考 · 高度与细部尺寸估计",
+            "y": 18.4
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p3-acceptance/trial-validation.json"
+          }
+        }
+      ],
+      "id": "shamian-west",
+      "url": "./data/detail/shamian-west.json",
+      "bytes": 9088,
+      "sha256": "fac599b521d88b1210463f0ac82c89e2feef66db6908a8df94d8b05d3362bc6d"
+    },
+    {
+      "kind": "buildings",
+      "bounds": [
+        -6143.849106980557,
+        900.5857749999838,
+        -5655.177116104193,
+        1005.3663500000027
+      ],
+      "buildings": [
+        {
+          "sampleId": "C07",
+          "sourceId": "osm:w352610312",
+          "replaceIds": [
+            "osm:w352610312"
+          ],
+          "position": [
+            -5805.048711594871,
+            0,
+            922.8422723579359
+          ],
+          "rotationY": -0.011512178508992148,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -5817.306751927358,
+              900.5857749999838
+            ],
+            [
+              -5792.284976860802,
+              900.8626500000717
+            ],
+            [
+              -5792.796878969528,
+              945.1072750001082
+            ],
+            [
+              -5817.808415994521,
+              944.8193250002843
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face S on source edge 2 facing 沙面大街",
+          "label": {
+            "name": "万宝楼（旧万国宝通银行）",
+            "sub": "照片结构参考 · 尺寸估计",
+            "y": 15.7
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p3-acceptance/dajie-validation.json"
+          }
+        },
+        {
+          "sampleId": "C08",
+          "sourceId": "osm:w352610315",
+          "replaceIds": [
+            "osm:w352610315"
+          ],
+          "position": [
+            -5888.9536318483615,
+            0,
+            925.2476005697757
+          ],
+          "rotationY": -0.03229249701589485,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -5901.729647671806,
+              917.1429000002815
+            ],
+            [
+              -5875.684068389252,
+              917.9735250001518
+            ],
+            [
+              -5876.175494413396,
+              933.3567000001084
+            ],
+            [
+              -5902.2313117389685,
+              932.5150000001088
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face S on source edge 2 facing 沙面大街",
+          "label": {
+            "name": "沙面大街50、52号",
+            "sub": "照片结构参考 · 尺寸估计",
+            "y": 15.1
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p3-acceptance/dajie-validation.json"
+          }
+        },
+        {
+          "sampleId": "C09",
+          "sourceId": "osm:w352610278",
+          "replaceIds": [
+            "osm:w352610278"
+          ],
+          "position": [
+            -6038.177154709743,
+            0,
+            923.0846375000742
+          ],
+          "rotationY": -0.01760806037371175,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -6046.751515028359,
+              909.822325000114
+            ],
+            [
+              -6029.142082493129,
+              910.1324250001968
+            ],
+            [
+              -6029.602794391129,
+              936.3469500000346
+            ],
+            [
+              -6047.212226926358,
+              936.0368499999519
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face S on source edge 2 facing 沙面大街",
+          "label": {
+            "name": "洛士利洋行旧址",
+            "sub": "照片结构参考 · 尺寸估计",
+            "y": 16.9
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p3-acceptance/dajie-validation.json"
+          }
+        },
+        {
+          "sampleId": "C13",
+          "sourceId": "osm:w352610287",
+          "replaceIds": [
+            "osm:w352610287",
+            "osm:w1521332871"
+          ],
+          "position": [
+            -6056.804242096874,
+            0,
+            919.0508591543312
+          ],
+          "rotationY": -0.0299131976396752,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -6064.852373587733,
+              902.8229250001586
+            ],
+            [
+              -6047.826509456539,
+              903.2991500002154
+            ],
+            [
+              -6048.5636484927545,
+              928.6498250001882
+            ],
+            [
+              -6048.768409335663,
+              935.2948249999366
+            ],
+            [
+              -6065.794273466858,
+              934.7853750002786
+            ],
+            [
+              -6065.589512623949,
+              928.1625250000021
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face S on source edge 3 facing 沙面大街",
+          "label": {
+            "name": "沙面大街64号（原瑞士领事馆）",
+            "sub": "照片结构参考 · 尺寸估计",
+            "y": 13.1
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p3-acceptance/dajie-validation.json"
+          }
+        },
+        {
+          "sampleId": "C14",
+          "sourceId": "osm:w982457852",
+          "replaceIds": [
+            "osm:w982457852"
+          ],
+          "position": [
+            -5980.042934417586,
+            0,
+            925.5015729636118
+          ],
+          "rotationY": -0.017811361372527618,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -5983.255177482115,
+              913.5989000001796
+            ],
+            [
+              -5976.405927270241,
+              913.7207250000295
+            ],
+            [
+              -5976.83592504064,
+              937.4101500002619
+            ],
+            [
+              -5983.674937210951,
+              937.2883250000186
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face S on source edge 2 facing 沙面大街",
+          "label": {
+            "name": "沙面大街58号",
+            "sub": "照片结构参考 · 尺寸估计",
+            "y": 11.9
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p3-acceptance/dajie-validation.json"
+          }
+        },
+        {
+          "sampleId": "C15",
+          "sourceId": "osm:w352610299",
+          "replaceIds": [
+            "osm:w352610299"
+          ],
+          "position": [
+            -5667.915858474489,
+            0,
+            937.2390829574614
+          ],
+          "rotationY": -0.031988257068193936,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -5655.740208423646,
+              946.3587500001748
+            ],
+            [
+              -5680.659603067294,
+              945.5613500002995
+            ],
+            [
+              -5680.086272706278,
+              928.1182250002713
+            ],
+            [
+              -5655.177116104193,
+              928.9156250001466
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face S on source edge 0 facing 沙面大街",
+          "label": {
+            "name": "沙面大街36、38号",
+            "sub": "照片结构参考 · 尺寸估计",
+            "y": 15.7
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p3-acceptance/dajie-validation.json"
+          }
+        },
+        {
+          "sampleId": "C06",
+          "sourceId": "osm:w352610265",
+          "replaceIds": [
+            "osm:w352610265"
+          ],
+          "position": [
+            -5807.51395375717,
+            0,
+            993.6505953169217
+          ],
+          "rotationY": 2.416299310340308,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -5819.40555057299,
+              1005.1116250001737
+            ],
+            [
+              -5819.139361476336,
+              981.6547750002984
+            ],
+            [
+              -5798.796371682168,
+              982.1088500000963
+            ],
+            [
+              -5795.223294964104,
+              985.2763000001258
+            ],
+            [
+              -5795.837577494284,
+              1005.3663500000027
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face NE on source edge 2 facing 沙面三街",
+          "label": {
+            "name": "渣打银行旧址",
+            "sub": "照片结构参考 · 尺寸估计",
+            "y": 17.1
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p4-extension/batch2-validation.json"
+          }
+        },
+        {
+          "sampleId": "C17",
+          "sourceId": "osm:w352610309",
+          "replaceIds": [
+            "osm:w352610309"
+          ],
+          "position": [
+            -5847.800760535129,
+            0,
+            921.2240375000631
+          ],
+          "rotationY": -0.031995523946538665,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -5864.463174169352,
+              933.0133750000309
+            ],
+            [
+              -5863.664606879391,
+              908.3936499999438
+            ],
+            [
+              -5831.1383469016155,
+              909.4346999999124
+            ],
+            [
+              -5831.9369141901225,
+              934.0544249999994
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face S on source edge 3 facing 沙面大街",
+          "label": {
+            "name": "旗昌洋行旧址",
+            "sub": "照片结构参考 · 尺寸估计",
+            "y": 16.3
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p4-extension/batch2-validation.json"
+          }
+        },
+        {
+          "sampleId": "C03",
+          "sourceId": "osm:w1530552891",
+          "replaceIds": [
+            "osm:w1530552891"
+          ],
+          "position": [
+            -6136.7690566911815,
+            0,
+            976.2889035719801
+          ],
+          "rotationY": 3.123313833426345,
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "footprint": [
+            [
+              -6143.787678728267,
+              980.9681250001435
+            ],
+            [
+              -6143.603393968485,
+              968.0657500000614
+            ],
+            [
+              -6129.669418572774,
+              968.3204750002839
+            ],
+            [
+              -6129.966321797027,
+              984.5231999999813
+            ],
+            [
+              -6143.849106980557,
+              984.2684750001522
+            ]
+          ],
+          "precision": "estimated",
+          "headingBasis": "photo face N on source edge 1 facing 沙面大街",
+          "label": {
+            "name": "英国圣公会牧师住宅旧址",
+            "sub": "照片结构参考 · 尺寸估计",
+            "y": 12.4
+          },
+          "integration": {
+            "status": "default",
+            "since": "2026-09-26",
+            "record": "docs/research/p4-extension/batch2-validation.json"
+          }
+        }
+      ],
+      "id": "shamian-dajie",
+      "url": "./data/detail/shamian-dajie.json",
+      "bytes": 38610,
+      "sha256": "b911e4f0a27d33ac86c77ae8da6d70348df0ea6a1ed0da22da290f7cc19f1380"
+    },
+    {
+      "kind": "roads",
+      "slot": 0,
+      "bounds": [
+        1556.182410032544,
+        -542.6749999999156,
+        1883.7997595139218,
+        -210.42499999990304
+      ],
+      "position": [
+        1719.9910847732328,
+        0,
+        -376.5499999999094
+      ],
+      "precision": "estimated",
+      "id": "huasui",
+      "url": "./data/detail/huasui.json",
+      "bytes": 63442,
+      "sha256": "0b092ec2ac4047c9ff4e92d886275596a635a84e8fabd6fcc611912521c133fe"
+    },
+    {
+      "kind": "roads",
+      "slot": 1,
+      "bounds": [
+        1883.7997595139218,
+        -542.6749999999156,
+        2221.655151165456,
+        -210.42499999990304
+      ],
+      "position": [
+        2052.727455339689,
+        0,
+        -376.54999999990935
+      ],
+      "precision": "estimated",
+      "id": "huaxia",
+      "url": "./data/detail/huaxia.json",
+      "bytes": 138464,
+      "sha256": "9a4da6ec409d5e62ae91ee364206dec2bcba86fb0289a37e161aa56cde68fb03"
+    }
+  ],
+  "trialOnly": true
+}

@@ -44,10 +44,10 @@ export const ZONE_AREAS = [
 // 三类智能体。speed 是基础速度（米/秒），再乘模拟倍率；patrol 为真的会在点位间循环巡逻，
 // 空闲时也可以被派去处理事件，处理完回到巡逻。dir 是巡逻方向，home 是驻点所在分区。
 export const AGENT_DEFS = [
-  { id: 'dog-1', role: 'ground', badge: '地', name: '巡检犬 01', kind: '四足巡检机器人', speed: 3.5, detectR: 55, patrol: true, dir: 1, home: 'A' },
+  { id: 'dog-1', role: 'ground', badge: '地', name: '机器狗 01', kind: '四足巡检机器人', speed: 3.5, detectR: 55, patrol: true, dir: 1, home: 'A' },
   { id: 'drone-1', role: 'air', badge: '天', name: '无人机 01', kind: '多旋翼巡检无人机', speed: 9, alt: 55, hoverAlt: 26, detectR: 100, patrol: true, dir: -1, home: 'C' },
-  { id: 'guard-1', role: 'human', badge: '人', name: '安保员 01', kind: '电动巡逻车', speed: 8, home: 'B' },
-  { id: 'guard-2', role: 'human', badge: '人', name: '安保员 02', kind: '电动巡逻车', speed: 8, home: 'D' },
+  { id: 'guard-1', role: 'human', badge: '人', name: '无人车 01', kind: '电动巡逻车', speed: 8, home: 'B' },
+  { id: 'guard-2', role: 'human', badge: '人', name: '无人车 02', kind: '电动巡逻车', speed: 8, home: 'D' },
 ];
 
 export const ROLE_NAME = { ground: '地面巡检', air: '空中巡检', human: '现场处置' };

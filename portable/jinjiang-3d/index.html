@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>锦江千年 · 白鹭湾园区巡检孪生</title>
+    <meta name="description" content="基于 OpenStreetMap 真实数据与 Three.js 的成都锦江区三维实景城市，内置白鹭湾科技生态园巡检孪生：机器狗、无人机、安保员沿真实路网自动巡逻、发现异常并按类型派单。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="锦江千年 · 白鹭湾园区巡检孪生" />
+    <meta property="og:description" content="浏览器里实时渲染的成都锦江区三维城市：真实路网与建筑、锦江河道，内置白鹭湾科技生态园巡检孪生演示——机器狗/无人机/安保员自动巡逻、异常发现、按类型派单处置。" />
+    <meta property="og:url" content="https://jinjiang-3d.vercel.app/" />
+    <!-- TODO: 替换为白鹭湾巡检演示的真实截图后再加回 og:image，旧截图是广州项目的，已删除避免分享卡片出错 -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0c0f14" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23000' d='M0 0h64v64H0z'/%3E%3Cpath fill='%23fff' d='M32 8 L56 52 H8 Z'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.2.5/latin.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.2.5/latin.css" />
+    <link rel="stylesheet" href="./src/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/build/three.module.js",
+          "three/addons/": "./vendor/three/examples/jsm/",
+          "three/examples/jsm/": "./vendor/three/examples/jsm/",
+          "postprocessing": "./vendor/postprocessing/index.js",
+          "n8ao": "./vendor/n8ao/N8AO.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="viewport" aria-label="成都锦江区城市三维视口"></canvas>
+      <div id="labels" aria-hidden="true"></div>
+      <div id="route-pins"></div>
+      <div id="patrol-tags" hidden></div>
+      <div id="patrol-caption" role="status" aria-live="polite" hidden></div>
+
+      <div id="live-clock" aria-label="成都当地时间">
+        <div class="lc-top"><i class="lc-dot"></i><b id="lc-state">实时</b><span>成都 · UTC+8</span></div>
+        <div id="lc-time">--:--:--</div>
+        <div id="lc-date"></div>
+        <button type="button" id="lc-resume" hidden>回到实时</button>
+      </div>
+
+      <div id="tree-inspection-note" hidden role="status">树木暂隐 · 仅供模型检查</div>
+
+      <aside id="panel" aria-label="场景与行程">
+        <div class="panel-head">
+          <div>
+            <div class="overline" id="panel-kicker">SCENES</div>
+            <h2 id="panel-title">锦江区实景场景</h2>
+          </div>
+          <button class="icon-btn" id="btn-collapse" title="收起面板" aria-label="收起面板">
+            <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
+          </button>
+        </div>
+        <div id="panel-modes" role="tablist" aria-label="面板">
+          <button type="button" class="mode on" id="tab-scenes" role="tab" aria-selected="true" aria-controls="panel-body">场景</button>
+          <button type="button" class="mode" id="tab-route" role="tab" aria-selected="false" aria-controls="route-body" hidden>行程</button>
+          <button type="button" class="mode" id="tab-patrol" role="tab" aria-selected="false" aria-controls="patrol-body">巡检</button>
+        </div>
+        <div class="panel-body" id="panel-body"></div>
+        <div class="panel-body" id="route-body" role="tabpanel" hidden></div>
+        <div class="panel-body" id="patrol-body" role="tabpanel" hidden></div>
+        <div class="panel-foot">
+          <div class="foot-actions">
+            <button class="act" id="btn-walk" type="button" aria-pressed="false" title="方向键进退与转向，拖动环顾，Shift 加速，V 键切换">第一人称游览</button>
+            <button class="act" id="btn-shot" type="button"><svg viewBox="0 0 24 24"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3" /><circle cx="12" cy="12" r="3" /></svg>导出截图</button>
+            <button class="act" id="btn-hide" type="button"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>隐藏界面</button>
+            <button class="act" id="btn-trees" type="button" aria-pressed="false" title="仅供查看被树冠遮挡的模型；切换场景后恢复" hidden>暂隐树木</button>
+          </div>
+          <div class="attrib" id="attrib">地图数据 © OpenStreetMap 贡献者（ODbL）</div>
+          <div class="attrib" id="detail-status" aria-live="polite">精细片区按位置加载 · 尺寸估计</div>
+        </div>
+      </aside>
+
+      <div id="minimap">
+        <div class="mm-head"><span>成都锦江区 P1 · 行政边界</span><span id="mm-scale"></span></div>
+        <canvas id="mm-canvas" width="640" height="276"></canvas>
+        <div class="legend" id="mm-legend"></div>
+      </div>
+
+      <div id="hint">
+        <span class="orbit"><b>方向键</b> 移动</span><span class="orbit"><b>左键</b> 旋转</span><span class="orbit"><b>右键</b> 平移</span><span class="orbit"><b>滚轮</b> 缩放</span><span class="orbit"><b>双击</b> 聚焦</span><span class="orbit"><b>1–0 - =</b> 切换场景</span><span class="orbit"><b>H</b> 隐藏界面</span><span class="orbit"><b>V</b> 第一人称</span><span class="walk"><b>↑↓</b> 进退</span><span class="walk"><b>←→</b> 转向</span><span class="walk"><b>A D</b> 横移</span><span class="walk"><b>拖动</b> 环顾</span><span class="walk"><b>Shift</b> 加速</span><span class="walk"><b>V</b> 退出</span>
+      </div>
+      <button class="icon-btn" id="btn-show" type="button" title="显示界面" aria-label="显示界面"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg></button>
+      <div id="status" class="hidden"><span class="spin"></span><span id="status-text">生成中…</span></div>
+      <div id="toast" class="hidden"></div>
+
+      <div id="loader">
+        <div class="loader-inner">
+          <div class="overline">JINJIANG · CITYFORGE</div>
+          <div class="loader-title">正在载入锦江区…</div>
+          <div class="loader-bar"><i></i></div>
+          <div class="loader-sub" id="loader-sub">OpenStreetMap 路网与建筑 · 锦江水系 · 真实街区</div>
+        </div>
+      </div>
+      <noscript>需要启用 JavaScript 与 WebGL2 才能运行。</noscript>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

@@ -49,7 +49,7 @@ test('没人巡到的事件由视频监控兜底发现', () => {
   assert.equal(inc.by, 'camera');
 });
 
-test('串行事件：空中复核完成后才派安保员', () => {
+test('串行事件：空中复核完成后才派无人车', () => {
   const sim = make();
   sim.agents.forEach((a) => { a.detectR = 0; });
   const inc = sim.inject('obstacle', 'C');
@@ -71,7 +71,7 @@ test('并行事件：烟雾告警同时派出空中和现场', () => {
   assert.notEqual(inc.steps[0].agentId, inc.steps[1].agentId);
 });
 
-test('派单选最近的空闲安保员，并且不会重复派同一个', () => {
+test('派单选最近的空闲无人车，并且不会重复派同一个', () => {
   const sim = make();
   sim.agents.forEach((a) => { a.detectR = 0; });
   sim.inject('smoke', 'C');
@@ -82,7 +82,7 @@ test('派单选最近的空闲安保员，并且不会重复派同一个', () =>
   assert.ok(busy.length <= 2);
 });
 
-test('处置完成后巡逻者回到原来的巡逻进度，安保员回到待命', () => {
+test('处置完成后巡逻者回到原来的巡逻进度，无人车回到待命', () => {
   const sim = make();
   const dog = sim.agent('dog-1');
   runCommand(sim, parseCommand('让机器狗去 E 区巡查'));
