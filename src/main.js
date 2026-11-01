@@ -10,6 +10,7 @@ import { Rain } from './scene/rain.js';
 import { Panel } from './ui/panel.js';
 import { Hud } from './ui/hud.js';
 import { Itinerary } from './ui/itinerary.js';
+import { LiveClock, chengduNow } from './ui/liveClock.js';
 import { PatrolSim } from './patrol/sim.js';
 import { PatrolView } from './patrol/view.js';
 import { PatrolUi } from './patrol/ui.js';
@@ -61,6 +62,22 @@ scene.add(rain.mesh);
 const rig = new CameraRig(camera, canvas);
 
 let params = { ...DEFAULT_ATMOS };
+// 实时模式：天色跟随成都当前时间（UTC+8），每 LIVE_STEP 毫秒按真实时间刷新一次太阳、天空与夜景灯光。
+// 选择非实时场景、行程指定时间或手动改时间即退出；时钟面板的“回到实时”可重新进入。
+const LIVE_STEP = 15000;
+let liveTime = true;
+let liveAt = 0;
+const clock = new LiveClock({ onResume: () => setLiveTime(true) });
+clock.setLive(true);
+function setLiveTime(on) {
+  liveTime = on;
+  clock.setLive(on);
+  liveAt = performance.now();
+  if (on) {
+    params = { ...params, timeOfDay: chengduNow().hour };
+    applyAtmos();
+  }
+}
 let D = null;
 let current = null;
 let wantShot = false;
@@ -181,6 +198,10 @@ function applyScene(id, instant = false) {
   const s = SCENES.find((q) => q.id === id);
   if (!s || !D) return;
   params = { ...s.atmos };
+  liveTime = !!s.live;
+  clock.setLive(liveTime);
+  liveAt = performance.now();
+  if (liveTime) params.timeOfDay = chengduNow().hour;
   applyAtmos();
   setScene(id);
   let pos;
@@ -321,9 +342,11 @@ function applyScene(id, instant = false) {
     rig.cine = null;
     camera.position.copy(pos);
     rig.controls.target.copy(tgt);
+    rig.controls.autoRotate = !!s.orbit && !reduceMotion.matches;
     rig.controls.update();
   } else {
-    rig.flyTo(pos, tgt, 2.2);
+    if (s.orbit) rig.orbit(tgt, pos);
+    else rig.flyTo(pos, tgt, 2.2);
     hud.toast(`场景：${s.name}`);
   }
 }
@@ -548,7 +571,7 @@ function syncHash(now) {
   const o = D.meta.origin;
   const ll = (v) => [(v.x / o.kx + o.lon).toFixed(5), (-v.z / o.kz + o.lat).toFixed(5), v.y.toFixed(1)];
   const extra = itinerary?.interestParam();
-  const h = `cam=${[...ll(camera.position), ...ll(rig.controls.target)].join(',')}&t=${params.timeOfDay}&w=${params.weather}${extra ? `&interests=${extra}` : ''}`;
+  const h = `cam=${[...ll(camera.position), ...ll(rig.controls.target)].join(',')}&${liveTime ? 'live=1' : `t=${params.timeOfDay}`}&w=${params.weather}${extra ? `&interests=${extra}` : ''}`;
   if (h !== hashCam) {
     hashCam = h;
     history.replaceState(null, '', `#${h}`);
@@ -563,9 +586,13 @@ function applyHash(instant) {
   const c = (q.get('cam') || '').split(',').map(Number);
   if (c.length === 6 && !c.some(Number.isNaN)) {
     rig.releaseWalk();
-    const base = SCENES[0].atmos;
+    const base = SCENES.find((q) => q.id === 'chunxi').atmos;
     const t = +q.get('t');
     params = { ...base, timeOfDay: t >= 0 && t < 24 ? t : base.timeOfDay, weather: WEATHERS.includes(q.get('w')) ? q.get('w') : base.weather };
+    liveTime = q.get('live') === '1';
+    clock.setLive(liveTime);
+    liveAt = performance.now();
+    if (liveTime) params.timeOfDay = chengduNow().hour;
     applyAtmos();
     camera.position.copy(P3(c.slice(0, 3)));
     rig.controls.target.copy(P3(c.slice(3)));
@@ -632,6 +659,12 @@ function frame(now) {
   frameN++;
   if (frameN > 60) adaptQuality(now, dt);
   U.uTime.value += dt;
+  if (liveTime && now - liveAt > LIVE_STEP) {
+    liveAt = now;
+    params = { ...params, timeOfDay: chengduNow().hour };
+    applyAtmos();
+  }
+  clock.tick(params.timeOfDay);
   rig.update(dt);
   // 相机不钻进山体
   const gh = D.geo.height(camera.position.x, camera.position.z);
@@ -826,6 +859,8 @@ itinerary = new Itinerary({
   onLeaveScene: () => setScene(null),
   getTime: () => params.timeOfDay,
   setTime: (hour) => {
+    liveTime = false;
+    clock.setLive(false);
     params = { ...params, timeOfDay: hour };
     applyAtmos();
   },
@@ -858,6 +893,10 @@ window.__gz = {
     return params;
   },
   set: (k, v) => {
+    if (k === 'timeOfDay') {
+      liveTime = false;
+      clock.setLive(false);
+    }
     params[k] = v;
     applyAtmos();
   },
@@ -886,6 +925,8 @@ async function bench({ ids = SCENES.filter((s) => !s.cinematic).map((s) => s.id)
     lastInput = performance.now();
     applyScene(id, true);
     if (atmos) {
+      liveTime = false;
+      clock.setLive(false);
       params = { ...params, ...atmos };
       applyAtmos();
     }

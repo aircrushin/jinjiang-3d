@@ -38,6 +38,13 @@
       <div id="patrol-tags" hidden></div>
       <div id="patrol-caption" role="status" aria-live="polite" hidden></div>
 
+      <div id="live-clock" aria-label="成都当地时间">
+        <div class="lc-top"><i class="lc-dot"></i><b id="lc-state">实时</b><span>成都 · UTC+8</span></div>
+        <div id="lc-time">--:--:--</div>
+        <div id="lc-date"></div>
+        <button type="button" id="lc-resume" hidden>回到实时</button>
+      </div>
+
       <div id="tree-inspection-note" hidden role="status">树木暂隐 · 仅供模型检查</div>
 
       <aside id="panel" aria-label="场景与行程">
@@ -86,7 +93,7 @@
       <div id="loader">
         <div class="loader-inner">
           <div class="overline">JINJIANG · CITYFORGE</div>
-          <div class="loader-title">正在载入真实成都锦江区…</div>
+          <div class="loader-title">正在载入锦江区…</div>
           <div class="loader-bar"><i></i></div>
           <div class="loader-sub" id="loader-sub">OpenStreetMap 路网与建筑 · 锦江水系 · 真实街区</div>
         </div>
@@ -96,4 +103,3 @@
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>
-

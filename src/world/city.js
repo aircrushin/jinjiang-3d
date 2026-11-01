@@ -21,6 +21,8 @@ import { createDetailLayer } from './detail-layer.js';
 import { applyEcoParkStyle } from '../ecopark/style.js';
 import { buildEcoPark } from '../ecopark/layout.js';
 import { emitEcoPark } from '../ecopark/emit.js';
+import { buildJinlin } from '../jinlin/layout.js';
+import { emitJinlin } from '../jinlin/emit.js';
 import { RNG, hash32, lin } from '../core/rng.js';
 import { BLD, TREE_REC as TR } from './schema.js';
 
@@ -202,6 +204,8 @@ export class World {
     if (isChengdu) {
       D.ecoPark = buildEcoPark(D);
       emitEcoPark(P, D.ecoPark, (x, z) => geo.height(x, z));
+      D.jinlin = buildJinlin(D);
+      emitJinlin(P, D.jinlin, (x, z) => geo.height(x, z));
     }
     for (const lm of D.landmarks) {
       P.y0 = lm.y || 0;

@@ -99,7 +99,7 @@ export class Hud {
     }
     cands.sort((p, q) => p.pri - q.pri || p.d - q.d);
     // 预留区域：左下小地图
-    const placed = [[0, 0, 16, 16]];
+    const placed = [[0, 0, 230, 112]]; // 左上角：实时时钟
     const mm = document.getElementById('minimap');
     if (mm.style.display !== 'none') placed.push([0, h - 270, 380, h]);
     for (const l of this.labels) l.show = false;

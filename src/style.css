@@ -119,7 +119,7 @@ body.walk-mode #viewport, body.walk-mode #viewport:active { cursor: crosshair; }
 @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
 .loader-sub { margin-top: 14px; font-size: 12px; color: var(--muted); font-family: var(--mono); line-height: 1.5; }
 
-body.ui-hidden #panel, body.ui-hidden #minimap, body.ui-hidden #hint, body.ui-hidden #route-pins { opacity: 0; pointer-events: none; }
+body.ui-hidden #panel, body.ui-hidden #live-clock, body.ui-hidden #minimap, body.ui-hidden #hint, body.ui-hidden #route-pins { opacity: 0; pointer-events: none; }
 
 /* ---------- 兴趣行程 ---------- */
 .route-lead { margin: 4px 4px 12px; font-size: 13px; line-height: 1.55; color: var(--muted); }
@@ -247,4 +247,25 @@ body.ui-hidden #btn-show { opacity: 1; pointer-events: auto; }
 
 @media (max-width: 1100px) {
   #patrol-caption { left: 50%; top: 12px; min-width: 0; max-width: calc(100vw - 32px); }
+}
+
+/* ---------- 实时时钟 ---------- */
+#live-clock { position: absolute; top: 20px; left: 20px; z-index: 4; min-width: 176px; padding: 10px 14px 11px; background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--dim); backdrop-filter: blur(16px) saturate(1.12); -webkit-backdrop-filter: blur(16px) saturate(1.12); box-shadow: var(--shadow); font-family: var(--mono); transition: opacity 0.3s; pointer-events: none; }
+#live-clock.is-live { border-left-color: #e4b15a; }
+#live-clock .lc-top { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.08em; color: var(--dim); }
+#live-clock .lc-top b { font-weight: 500; color: var(--muted); }
+#live-clock .lc-top span { margin-left: auto; }
+#live-clock .lc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); flex: none; }
+#live-clock.is-live .lc-dot { background: #e4b15a; box-shadow: 0 0 0 0 rgba(228, 177, 90, 0.6); animation: lc-pulse 2s ease-out infinite; }
+#live-clock #lc-time { margin-top: 6px; font-size: 28px; line-height: 1; font-weight: 500; letter-spacing: 0.02em; color: var(--text); font-variant-numeric: tabular-nums; }
+#live-clock #lc-date { margin-top: 6px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+#live-clock #lc-resume { appearance: none; margin-top: 8px; width: 100%; height: 26px; border: 1px solid var(--border-2); background: var(--accent-soft); color: var(--text); font: inherit; font-size: 11px; cursor: pointer; pointer-events: auto; }
+#live-clock #lc-resume:hover { background: var(--panel-2); }
+#live-clock #lc-resume[hidden] { display: none; }
+@keyframes lc-pulse { 70% { box-shadow: 0 0 0 7px rgba(228, 177, 90, 0); } 100% { box-shadow: 0 0 0 0 rgba(228, 177, 90, 0); } }
+@media (prefers-reduced-motion: reduce) { #live-clock.is-live .lc-dot { animation: none; } }
+@media (max-width: 760px) {
+  #live-clock { top: 10px; left: 10px; min-width: 0; padding: 7px 10px 8px; }
+  #live-clock .lc-top span, #live-clock #lc-date { display: none; }
+  #live-clock #lc-time { font-size: 20px; margin-top: 4px; }
 }

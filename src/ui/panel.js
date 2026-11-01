@@ -1,6 +1,7 @@
 // 场景面板：预设场景、截图、隐藏界面与精细建筑的临时遮挡检查。
 
 import { SCENES, SCENE_KEYS } from '../core/scenes.js';
+import { chengduNow } from './liveClock.js';
 
 const I = {
   hero: '<svg viewBox="0 0 24 24"><path d="M3 20l6-9 4 5 3-4 5 8z"/><circle cx="16" cy="6" r="2"/></svg>',
@@ -20,9 +21,9 @@ const I = {
 const WX = { clear: '晴朗', humid: '湿润薄雾', rain: '阵雨', huinan: '回南天' };
 const fmtTime = (v) => `${String(Math.floor(v)).padStart(2, '0')}:${String(Math.round((v % 1) * 60)).padStart(2, '0')}`;
 
-// 缩略色带：按时间与天气给出天空渐变
-function swatch(a) {
-  const t = a.timeOfDay;
+// 缩略色带：按时间与天气给出天空渐变（实时场景取成都当前小时）
+function swatch(a, live) {
+  const t = live ? chengduNow().hour : a.timeOfDay;
   if (a.weather === 'rain') return 'linear-gradient(160deg,#5b6570,#2b3138)';
   if (a.weather === 'huinan') return 'linear-gradient(160deg,#b9bcb8,#7d8580)';
   if (t < 6.5 || t > 19.6) return 'linear-gradient(160deg,#1c2238,#3a2233 60%,#e0864a)';
@@ -38,8 +39,8 @@ export class Panel {
     body.innerHTML = SCENES.map(
       (s, i) => `${s.group === 'street' && SCENES[i - 1]?.group !== 'street' ? '<div class="scene-group">街景漫步 · 人眼高度</div>' : s.group === 'detail' && SCENES[i - 1]?.group !== 'detail' ? '<div class="scene-group">精细片区 · 外观参考，尺寸估计</div>' : ''}
       <button type="button" class="scene" data-id="${s.id}">
-        <span class="thumb" style="background:${swatch(s.atmos)}">${I[s.icon] || ''}<em>${SCENE_KEYS[i] || ''}</em></span>
-        <span class="txt"><b>${s.name}</b><small>${s.sub}</small><i>${fmtTime(s.atmos.timeOfDay)} · ${WX[s.atmos.weather]}</i></span>
+        <span class="thumb" style="background:${swatch(s.atmos, s.live)}">${I[s.icon] || ''}<em>${SCENE_KEYS[i] || ''}</em></span>
+        <span class="txt"><b>${s.name}</b><small>${s.sub}</small><i>${s.live ? '实时' : fmtTime(s.atmos.timeOfDay)} · ${WX[s.atmos.weather]}</i></span>
       </button>`,
     ).join('');
     this.btns = [...body.querySelectorAll('.scene')];
