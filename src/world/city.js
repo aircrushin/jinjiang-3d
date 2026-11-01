@@ -21,6 +21,7 @@ import { createDetailLayer } from './detail-layer.js';
 import { applyEcoParkStyle } from '../ecopark/style.js';
 import { buildEcoPark } from '../ecopark/layout.js';
 import { emitEcoPark } from '../ecopark/emit.js';
+import { emitEcoBuildings } from '../ecopark/buildings.js';
 import { buildJinlin } from '../jinlin/layout.js';
 import { emitJinlin } from '../jinlin/emit.js';
 import { RNG, hash32, lin } from '../core/rng.js';
@@ -188,7 +189,10 @@ export class World {
     const P = new Parts();
     const fallbackParts=new Map([...this.detailFallbacks.keys()].map(id=>[id,new Parts()]));
     const bm = D.S.bldMeta;
+    // 生态园办公楼的屋面设备由 ecopark/buildings.js 统一布置，不走全城通用的随机屋顶设备
+    const ecoOwn = isChengdu ? new Set(D.ecoParkStyled) : null;
     for (let i = 0; i < D.nBuildings; i++) {
+      if (ecoOwn?.has(i)) continue;
       const target=fallbackParts.get(D.detailGroups.sourceTiles.get(D.buildingSourceIds[i]))||P;
       emitRoutedParts(P,target,p=>osmRoofDetails(p,bm,i,fp.qEdgesOf,fp.outerOf));
     }
@@ -204,6 +208,7 @@ export class World {
     if (isChengdu) {
       D.ecoPark = buildEcoPark(D);
       emitEcoPark(P, D.ecoPark, (x, z) => geo.height(x, z));
+      D.ecoBuildings = emitEcoBuildings(P, D, D.ecoParkStyled);
       D.jinlin = buildJinlin(D);
       emitJinlin(P, D.jinlin, (x, z) => geo.height(x, z));
     }

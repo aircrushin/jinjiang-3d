@@ -31,7 +31,7 @@ function overlap(a, b, m = 0) {
   return true;
 }
 
-function insideRect(r, x, z, m = 0) {
+export function insideRect(r, x, z, m = 0) {
   const dx = x - r.cx;
   const dz = z - r.cz;
   return Math.abs(dx * r.ux + dz * r.uz) < r.hw + m && Math.abs(-dx * r.uz + dz * r.ux) < r.hd + m;
@@ -91,7 +91,7 @@ function buildingRects(bm, bounds) {
   return out;
 }
 
-function sampleRoads(roads, bounds) {
+export function sampleRoads(roads, bounds) {
   const out = [];
   for (const r of roads) {
     if (r.cls === 7) continue;
@@ -109,7 +109,7 @@ function sampleRoads(roads, bounds) {
   return out;
 }
 
-const roadDist = (roadPts, x, z) => roadPts.reduce((m, p) => Math.min(m, Math.hypot(p.x - x, p.z - z)), Infinity);
+export const roadDist = (roadPts, x, z) => roadPts.reduce((m, p) => Math.min(m, Math.hypot(p.x - x, p.z - z)), Infinity);
 
 // ---------- 大门与围界 ----------
 function pickGates(zone, roadPts) {

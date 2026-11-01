@@ -5,6 +5,8 @@ import { loadCity } from '../src/world/data.js';
 import { BLD, TREE_REC } from '../src/world/schema.js';
 import { buildEcoPark, clearEcoLamps, clearEcoTrees } from '../src/ecopark/layout.js';
 import { applyEcoParkStyle } from '../src/ecopark/style.js';
+import { emitEcoBuildings } from '../src/ecopark/buildings.js';
+import { Parts } from '../src/world/parts.js';
 import { PatrolSim } from '../src/patrol/sim.js';
 import { makeRoute } from '../src/patrol/route.js';
 import { planPath } from '../src/tour/planner.js';
@@ -158,4 +160,37 @@ test('指定分区时，落点只选该分区的设施', async (t) => {
     if (!inc) continue;
     assert.equal(inc.sectorName, 'E区');
   }
+});
+
+test('办公楼细节：构件数值有限、有入口雨棚和屋面设备，且落在建筑轮廓附近', async (t) => {
+  const D = await city(t);
+  const styled = applyEcoParkStyle(D);
+  const P = new Parts();
+  const stats = emitEcoBuildings(P, D, styled);
+  assert.ok(stats.offices >= 6 && stats.utility >= 1, JSON.stringify(stats));
+  // 每栋办公楼至少有一个入口雨棚（含招牌）和若干屋面设备
+  assert.ok(P.parts.box.n > stats.offices * 20, `box 只有 ${P.parts.box.n}`);
+  assert.ok(P.parts.cyl.n >= 1 && P.parts.wedge.n >= 1, '缺少冷却塔或光伏板');
+  const bm = D.S.bldMeta;
+  const near = styled.map((k) => ({ x: bm[k * BLD.N + BLD.CX], z: bm[k * BLD.N + BLD.CZ], r: Math.hypot(bm[k * BLD.N + BLD.W], bm[k * BLD.N + BLD.D]) / 2 + 12 }));
+  for (const [name, buf] of Object.entries(P.parts)) {
+    for (let i = 0; i < buf.n; i++) {
+      const m = buf.M.subarray(i * 16, i * 16 + 16);
+      assert.ok(m.every(Number.isFinite), `${name}[${i}] 含非有限值`);
+      assert.ok(near.some((b) => Math.hypot(m[12] - b.x, m[14] - b.z) < b.r), `${name}[${i}] 离所有办公楼都太远`);
+    }
+  }
+});
+
+test('办公楼细节同样的数据得到同样的结果，且不修改建筑参数', async (t) => {
+  const D = await city(t);
+  const styled = applyEcoParkStyle(D);
+  const before = Float32Array.from(D.S.bldMeta);
+  const a = new Parts();
+  const b = new Parts();
+  emitEcoBuildings(a, D, styled);
+  emitEcoBuildings(b, D, styled);
+  assert.deepEqual(a.parts.box.M.subarray(0, a.parts.box.n * 16), b.parts.box.M.subarray(0, b.parts.box.n * 16));
+  assert.deepEqual(D.S.bldMeta, before);
+  assert.deepEqual(emitEcoBuildings(new Parts(), D, []), { offices: 0, utility: 0 });
 });
