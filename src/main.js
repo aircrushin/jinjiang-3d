@@ -351,9 +351,6 @@ window.addEventListener('keydown', (e) => {
   else if (k === 'v' && !e.metaKey && !e.ctrlKey && !e.altKey) {
     e.preventDefault();
     toggleWalk();
-  } else if (k === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-    e.preventDefault();
-    itinerary?.showTab('route');
   } else if (SCENES[si]) applyScene(SCENES[si].id);
 });
 
