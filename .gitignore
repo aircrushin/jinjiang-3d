@@ -24,3 +24,5 @@ data/source/*.osm.pbf
 /output
 .vercel
 .env*
+
+/portable
